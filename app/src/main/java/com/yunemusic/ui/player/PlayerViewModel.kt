@@ -278,12 +278,34 @@ class PlayerViewModel @Inject constructor(
                     musicService?.playTrack(track, streamUrl)
                     trackPlayStartMs = System.currentTimeMillis()
                     _uiState.update { it.copy(isLoading = false) }
+                    prefillQueueIfNeeded(track)
                 }
                 .onFailure { error ->
                     _uiState.update {
                         it.copy(isLoading = false, error = error.message ?: "Wiedergabe fehlgeschlagen")
                     }
                 }
+        }
+    }
+
+    private fun prefillQueueIfNeeded(seedTrack: Track) {
+        // Only fill if there are no tracks queued after the current one
+        val state = _uiState.value
+        if (state.queue.size > state.currentQueueIndex + 1) return
+        viewModelScope.launch {
+            val related = repository.getRelatedTracks(seedTrack.id)
+                .getOrElse { emptyList() }
+                .filter { it.id != seedTrack.id }
+                .take(10)
+            val upcoming = related.ifEmpty {
+                repository.getTrending().getOrElse { emptyList() }.take(10)
+            }
+            if (upcoming.isNotEmpty()) {
+                val current = _uiState.value.queue
+                val newQueue = (current + upcoming).distinctBy { it.id }
+                _uiState.update { it.copy(queue = newQueue) }
+                musicService?.setQueue(newQueue, _uiState.value.currentQueueIndex)
+            }
         }
     }
 
