@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.media.audiofx.DynamicsProcessing
 import android.net.Uri
+import android.content.pm.ServiceInfo
 import android.os.Binder
 import android.os.Build
 import android.os.Bundle
@@ -231,7 +232,11 @@ class MusicService : MediaBrowserServiceCompat() {
         exoPlayer.prepare()
         exoPlayer.play()
         updateMediaSessionMetadata(track)
-        startForeground(NOTIFICATION_ID, buildNotification())
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+        } else {
+            startForeground(NOTIFICATION_ID, buildNotification())
+        }
     }
 
     fun play() { exoPlayer.play() }
