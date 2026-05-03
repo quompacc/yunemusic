@@ -23,6 +23,7 @@ class UserPreferences @Inject constructor(
         val KEY_WIFI_ONLY = booleanPreferencesKey("wifi_only")
         val KEY_CAR_MODE_TRIGGER = stringPreferencesKey("car_mode_trigger") // bluetooth, manual
         val KEY_TASTE_PROFILE_JSON = stringPreferencesKey("taste_profile_json")
+        val KEY_LOUDNESS_LIMITER = booleanPreferencesKey("loudness_limiter")
     }
 
     val audioQuality: Flow<Int> = context.dataStore.data
@@ -46,6 +47,13 @@ class UserPreferences @Inject constructor(
         }
         .map { prefs -> prefs[KEY_CAR_MODE_TRIGGER] ?: "manual" }
 
+    val loudnessLimiter: Flow<Boolean> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) emit(emptyPreferences())
+            else throw exception
+        }
+        .map { prefs -> prefs[KEY_LOUDNESS_LIMITER] ?: true }
+
     val tasteProfileJson: Flow<String> = context.dataStore.data
         .catch { exception ->
             if (exception is IOException) emit(emptyPreferences())
@@ -68,6 +76,12 @@ class UserPreferences @Inject constructor(
     suspend fun setCarModeTrigger(trigger: String) {
         context.dataStore.edit { prefs ->
             prefs[KEY_CAR_MODE_TRIGGER] = trigger
+        }
+    }
+
+    suspend fun setLoudnessLimiter(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_LOUDNESS_LIMITER] = enabled
         }
     }
 

@@ -5,8 +5,10 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
+import android.media.audiofx.DynamicsProcessing
 import android.net.Uri
 import android.os.Binder
+import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.support.v4.media.MediaBrowserCompat
@@ -17,12 +19,14 @@ import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.media.MediaBrowserServiceCompat
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.yunemusic.MainActivity
 import com.yunemusic.R
 import com.yunemusic.domain.model.Track
+import com.yunemusic.data.preferences.UserPreferences
 import com.yunemusic.domain.repository.MusicRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
@@ -62,10 +66,12 @@ class MusicService : MediaBrowserServiceCompat() {
 
     @Inject lateinit var tasteAnalyzer: TasteAnalyzer
     @Inject lateinit var repository: MusicRepository
+    @Inject lateinit var userPreferences: UserPreferences
 
     private lateinit var mediaSession: MediaSessionCompat
     private lateinit var exoPlayer: ExoPlayer
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var dynamicsProcessing: DynamicsProcessing? = null
 
     var callback: Callback? = null
 
@@ -96,6 +102,7 @@ class MusicService : MediaBrowserServiceCompat() {
         initMediaSession()
         initExoPlayer()
         startProgressTracking()
+        observeLimiterSetting()
     }
 
     override fun onBind(intent: Intent): IBinder {
@@ -137,6 +144,14 @@ class MusicService : MediaBrowserServiceCompat() {
                     updatePlaybackState()
                     updateNotification()
                 }
+
+                override fun onAudioSessionIdChanged(audioSessionId: Int) {
+                    if (audioSessionId != C.AUDIO_SESSION_ID_UNSET) {
+                        serviceScope.launch {
+                            applyLimiter(userPreferences.loudnessLimiter.first(), audioSessionId)
+                        }
+                    }
+                }
             })
         }
     }
@@ -154,6 +169,57 @@ class MusicService : MediaBrowserServiceCompat() {
                 delay(500)
             }
         }
+    }
+
+    // ── Loudness limiter ──────────────────────────────────────────────────────
+
+    private fun observeLimiterSetting() {
+        serviceScope.launch {
+            userPreferences.loudnessLimiter.collect { enabled ->
+                applyLimiter(enabled)
+            }
+        }
+    }
+
+    private fun applyLimiter(enabled: Boolean, sessionId: Int = exoPlayer.audioSessionId) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            dynamicsProcessing?.release()
+            dynamicsProcessing = null
+            if (enabled && sessionId != C.AUDIO_SESSION_ID_UNSET) {
+                dynamicsProcessing = createDynamicsProcessing(sessionId)
+            }
+        } else {
+            // API < 28 fallback: reduce internal volume to provide ~3 dB headroom
+            exoPlayer.volume = if (enabled) 0.85f else 1.0f
+        }
+    }
+
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.P)
+    private fun createDynamicsProcessing(audioSessionId: Int): DynamicsProcessing? = try {
+        val config = DynamicsProcessing.Config.Builder(
+            DynamicsProcessing.VARIANT_FAVOR_FREQUENCY_RESOLUTION,
+            2,               // stereo
+            false, 0,        // no pre-EQ
+            false, 0,        // no MBC
+            false, 0,        // no post-EQ
+            true             // limiter only
+        ).build()
+        DynamicsProcessing(0, audioSessionId, config).also { dp ->
+            val limiter = DynamicsProcessing.Limiter(
+                true, true,
+                0,            // linkGroup: beide Kanäle gekoppelt
+                1f,           // attackTime ms — schnell einrasten
+                100f,         // releaseTime ms
+                100f,         // ratio — Brick-Wall
+                -1f,          // threshold dBFS — greift kurz vor 0 dBFS
+                0f            // postGain dB
+            )
+            repeat(2) { ch -> dp.setLimiterByChannelIndex(ch, limiter) }
+            dp.enabled = true
+        }
+    } catch (e: Exception) {
+        Log.w(TAG, "DynamicsProcessing nicht verfügbar: ${e.message}")
+        null
     }
 
     // ── Playback controls ──────────────────────────────────────────────────────
@@ -380,6 +446,8 @@ class MusicService : MediaBrowserServiceCompat() {
         callback = null
         browseCache.clear()
         serviceScope.cancel()
+        dynamicsProcessing?.release()
+        dynamicsProcessing = null
         mediaSession.release()
         exoPlayer.release()
     }

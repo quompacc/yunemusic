@@ -13,6 +13,7 @@ data class SettingsUiState(
     val audioQuality: Int = 1,
     val wifiOnly: Boolean = false,
     val carModeTrigger: String = "manual",
+    val loudnessLimiter: Boolean = true,
     val message: String? = null,
     val isError: Boolean = false
 )
@@ -31,9 +32,15 @@ class SettingsViewModel @Inject constructor(
             combine(
                 userPreferences.audioQuality,
                 userPreferences.wifiOnly,
-                userPreferences.carModeTrigger
-            ) { quality, wifiOnly, trigger ->
-                SettingsUiState(audioQuality = quality, wifiOnly = wifiOnly, carModeTrigger = trigger)
+                userPreferences.carModeTrigger,
+                userPreferences.loudnessLimiter
+            ) { quality, wifiOnly, trigger, limiter ->
+                SettingsUiState(
+                    audioQuality = quality,
+                    wifiOnly = wifiOnly,
+                    carModeTrigger = trigger,
+                    loudnessLimiter = limiter
+                )
             }.collect { _uiState.value = it }
         }
     }
@@ -48,6 +55,10 @@ class SettingsViewModel @Inject constructor(
 
     fun updateCarModeTrigger(trigger: String) {
         viewModelScope.launch { userPreferences.setCarModeTrigger(trigger) }
+    }
+
+    fun updateLoudnessLimiter(enabled: Boolean) {
+        viewModelScope.launch { userPreferences.setLoudnessLimiter(enabled) }
     }
 
     fun resetTasteProfile() {

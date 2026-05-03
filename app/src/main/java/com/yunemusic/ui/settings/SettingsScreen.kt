@@ -118,6 +118,47 @@ fun SettingsScreen(
                 }
             }
 
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardDark),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Lautstärke-Begrenzer",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = "Verhindert Verzerrung bei maximaler Lautstärke",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextTertiary
+                            )
+                        }
+                        Switch(
+                            checked = uiState.loudnessLimiter,
+                            onCheckedChange = { viewModel.updateLoudnessLimiter(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = OnPrimary,
+                                checkedTrackColor = VioletPrimary,
+                                uncheckedThumbColor = TextSecondary,
+                                uncheckedTrackColor = OutlineDark
+                            )
+                        )
+                    }
+                }
+            }
+
             // Data Mode Section
             item {
                 SettingsSectionHeader("Netzwerk")
