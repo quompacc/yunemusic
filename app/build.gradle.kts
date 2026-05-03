@@ -1,3 +1,4 @@
+import java.util.Properties
 import java.util.concurrent.TimeUnit
 
 plugins {
@@ -12,6 +13,11 @@ plugins {
 // SNAPSHOT immer frisch laden (für NewPipe dev-SNAPSHOT)
 configurations.all {
     resolutionStrategy.cacheChangingModulesFor(0, TimeUnit.SECONDS)
+}
+
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) load(f.inputStream())
 }
 
 android {
@@ -31,13 +37,28 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile     = file(localProps["KEYSTORE_FILE"] as? String ?: "yunemusic.jks")
+            storePassword = localProps["KEYSTORE_PASSWORD"] as? String ?: ""
+            keyAlias      = localProps["KEY_ALIAS"]          as? String ?: ""
+            keyPassword   = localProps["KEY_PASSWORD"]       as? String ?: ""
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled   = true
+            isShrinkResources = true
+            signingConfig     = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix   = "-debug"
         }
     }
 
