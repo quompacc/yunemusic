@@ -76,10 +76,14 @@ class YouTubeRepository @Inject constructor() {
 
     suspend fun getTrending(): Result<List<Track>> = withContext(Dispatchers.IO) {
         runCatching {
-            val kioskList = YouTube.kioskList
-            val trending = kioskList.getExtractorById("Trending", null)
-            trending.fetchPage()
-            trending.initialPage.items
+            val queries = listOf("trending music 2025", "viral songs 2025", "best music 2025")
+            val extractor = YouTube.getSearchExtractor(
+                queries.random(),
+                listOf(YoutubeSearchQueryHandlerFactory.VIDEOS),
+                null
+            )
+            extractor.fetchPage()
+            extractor.initialPage.items
                 .filterIsInstance<StreamInfoItem>()
                 .map { it.toTrack() }
         }.onFailure { Log.e(TAG, "getTrending failed", it) }
