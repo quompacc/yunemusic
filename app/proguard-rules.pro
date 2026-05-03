@@ -21,6 +21,12 @@
 -dontwarn okhttp3.**
 -dontwarn okio.**
 
+# javax.script (Java SE scripting API — nicht auf Android verfügbar, von Rhino referenziert)
+-dontwarn javax.script.**
+
+# R8 ConcurrentModificationException mit Rhino — Optimierungspass deaktivieren
+-dontoptimize
+
 # Kotlinx Serialization
 -keepattributes *Annotation*, InnerClasses
 -dontnote kotlinx.serialization.AnnotationsKt

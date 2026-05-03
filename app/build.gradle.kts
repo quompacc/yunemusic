@@ -39,7 +39,7 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile     = file(localProps["KEYSTORE_FILE"] as? String ?: "yunemusic.jks")
+            storeFile     = rootProject.file(localProps["KEYSTORE_FILE"] as? String ?: "yunemusic.jks")
             storePassword = localProps["KEYSTORE_PASSWORD"] as? String ?: ""
             keyAlias      = localProps["KEY_ALIAS"]          as? String ?: ""
             keyPassword   = localProps["KEY_PASSWORD"]       as? String ?: ""
@@ -48,8 +48,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled   = true
-            isShrinkResources = true
+            isMinifyEnabled   = false  // R8 8.5.35 CME-Bug mit Rhino — nach AGP-Upgrade reaktivieren
+            isShrinkResources = false
             signingConfig     = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -94,6 +94,8 @@ android {
             excludes += "/META-INF/LICENSE*"
             excludes += "/META-INF/NOTICE*"
             excludes += "/META-INF/*.kotlin_module"
+            // Rhino referenziert javax.script (Java SE) — auf Android nicht vorhanden
+            excludes += "META-INF/services/javax.script.ScriptEngineFactory"
         }
     }
 }
