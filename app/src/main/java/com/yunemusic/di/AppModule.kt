@@ -4,10 +4,10 @@ import android.content.Context
 import androidx.room.Room
 import com.yunemusic.data.local.YuneMusicDatabase
 import com.yunemusic.data.local.dao.PlayEventDao
+import com.yunemusic.data.local.dao.PlaylistDao
 import com.yunemusic.data.local.dao.TrackDao
 import com.yunemusic.data.preferences.UserPreferences
 import com.yunemusic.data.repository.MusicRepositoryImpl
-import com.yunemusic.data.youtube.YouTubeRepository
 import com.yunemusic.domain.repository.MusicRepository
 import dagger.Binds
 import dagger.Module
@@ -23,7 +23,9 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): YuneMusicDatabase =
-        Room.databaseBuilder(context, YuneMusicDatabase::class.java, "yune_music.db").build()
+        Room.databaseBuilder(context, YuneMusicDatabase::class.java, "yune_music.db")
+            .addMigrations(YuneMusicDatabase.MIGRATION_1_2)
+            .build()
 
     @Provides
     @Singleton
@@ -32,6 +34,10 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun providePlayEventDao(database: YuneMusicDatabase): PlayEventDao = database.playEventDao()
+
+    @Provides
+    @Singleton
+    fun providePlaylistDao(database: YuneMusicDatabase): PlaylistDao = database.playlistDao()
 }
 
 @Module

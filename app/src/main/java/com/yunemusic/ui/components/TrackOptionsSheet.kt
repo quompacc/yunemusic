@@ -29,6 +29,7 @@ fun TrackOptionsSheet(
     onPlayNow: () -> Unit,
     onPlayNext: () -> Unit,
     onAddToQueue: () -> Unit,
+    onAddToPlaylist: (() -> Unit)? = null,
     onLibraryToggle: (() -> Unit)? = null,
     libraryActionLabel: String = "Zur Bibliothek hinzufügen"
 ) {
@@ -89,6 +90,11 @@ fun TrackOptionsSheet(
             OptionItem(Icons.Default.PlayArrow, "Jetzt abspielen") { onPlayNow(); onDismiss() }
             OptionItem(Icons.Default.SkipNext, "Als Nächstes abspielen") { onPlayNext(); onDismiss() }
             OptionItem(Icons.Default.PlaylistAdd, "Zur Warteschlange") { onAddToQueue(); onDismiss() }
+            if (onAddToPlaylist != null) {
+                OptionItem(Icons.Default.PlaylistAddCheck, "Zur Playlist hinzufügen") {
+                    onDismiss(); onAddToPlaylist()
+                }
+            }
             if (onLibraryToggle != null) {
                 OptionItem(Icons.Default.FavoriteBorder, libraryActionLabel) {
                     onLibraryToggle(); onDismiss()

@@ -1,6 +1,7 @@
 package com.yunemusic.domain.repository
 
 import com.yunemusic.domain.model.PlayEvent
+import com.yunemusic.domain.model.Playlist
 import com.yunemusic.domain.model.TasteProfile
 import com.yunemusic.domain.model.Track
 import kotlinx.coroutines.flow.Flow
@@ -22,4 +23,11 @@ interface MusicRepository {
     suspend fun getRelatedTracks(videoId: String): Result<List<Track>>
     suspend fun getTrending(): Result<List<Track>>
     suspend fun getPlayedTrackIds(): Set<String>
+
+    fun getPlaylists(): Flow<List<Playlist>>
+    suspend fun createPlaylist(name: String): Long
+    suspend fun deletePlaylist(id: Long)
+    suspend fun addTrackToPlaylist(playlistId: Long, track: Track)
+    suspend fun removeTrackFromPlaylist(playlistId: Long, trackId: String)
+    fun getPlaylistTracks(playlistId: Long): Flow<List<Track>>
 }

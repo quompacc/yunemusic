@@ -2,12 +2,17 @@ package com.yunemusic.data.repository
 
 import android.util.Log
 import com.yunemusic.data.local.dao.PlayEventDao
+import com.yunemusic.data.local.dao.PlaylistDao
 import com.yunemusic.data.local.dao.TrackDao
+import com.yunemusic.data.local.entities.PlaylistEntity
 import com.yunemusic.data.local.entities.toDomain
 import com.yunemusic.data.local.entities.toEntity
+import com.yunemusic.data.local.entities.toPlaylistTrack
+import com.yunemusic.data.local.entities.toTrack
 import com.yunemusic.data.preferences.UserPreferences
 import com.yunemusic.data.youtube.YouTubeRepository
 import com.yunemusic.domain.model.PlayEvent
+import com.yunemusic.domain.model.Playlist
 import com.yunemusic.domain.model.TasteProfile
 import com.yunemusic.domain.model.Track
 import com.yunemusic.domain.repository.MusicRepository
@@ -24,6 +29,7 @@ class MusicRepositoryImpl @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val trackDao: TrackDao,
     private val playEventDao: PlayEventDao,
+    private val playlistDao: PlaylistDao,
     private val userPreferences: UserPreferences
 ) : MusicRepository {
 
@@ -92,4 +98,24 @@ class MusicRepositoryImpl @Inject constructor(
 
     override suspend fun getPlayedTrackIds(): Set<String> =
         playEventDao.getAllPlayedTrackIds().toSet()
+
+    override fun getPlaylists(): Flow<List<Playlist>> =
+        playlistDao.getAllPlaylistsWithCount().map { list ->
+            list.map { it.toDomain() }
+        }
+
+    override suspend fun createPlaylist(name: String): Long =
+        playlistDao.insertPlaylist(PlaylistEntity(name = name))
+
+    override suspend fun deletePlaylist(id: Long) =
+        playlistDao.deletePlaylist(id)
+
+    override suspend fun addTrackToPlaylist(playlistId: Long, track: Track) =
+        playlistDao.addTrack(track.toPlaylistTrack(playlistId))
+
+    override suspend fun removeTrackFromPlaylist(playlistId: Long, trackId: String) =
+        playlistDao.removeTrack(playlistId, trackId)
+
+    override fun getPlaylistTracks(playlistId: Long): Flow<List<Track>> =
+        playlistDao.getTracksForPlaylist(playlistId).map { it.map { e -> e.toTrack() } }
 }
