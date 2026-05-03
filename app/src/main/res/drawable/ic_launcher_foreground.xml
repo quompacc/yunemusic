@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Notenkopf (großer gefüllter Kreis) -->
+    <path
+        android:pathData="M38,72 m-13,0 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0 Z"
+        android:fillColor="#FFFFFF"/>
+
+    <!-- Notenhalm (dicker Strich nach oben) -->
+    <path
+        android:pathData="M51,72 L51,24"
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"/>
+
+    <!-- Soundwelle klein -->
+    <path
+        android:pathData="M62,46 Q69,52 62,58"
+        android:fillColor="#00000000"
+        android:strokeColor="#E6FFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"/>
+
+    <!-- Soundwelle mittel -->
+    <path
+        android:pathData="M67,40 Q77,52 67,64"
+        android:fillColor="#00000000"
+        android:strokeColor="#A6FFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"/>
+
+    <!-- Soundwelle groß -->
+    <path
+        android:pathData="M72,34 Q85,52 72,70"
+        android:fillColor="#00000000"
+        android:strokeColor="#66FFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"/>
+
+</vector>
