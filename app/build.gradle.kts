@@ -41,6 +41,16 @@ android {
         }
     }
 
+    // Universelle APK für alle ABIs — verhindert "ungültiges Paket" bei manuellem Install
+    splits {
+        abi {
+            isEnable = false
+        }
+        density {
+            isEnable = false
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
