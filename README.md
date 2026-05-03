@@ -78,7 +78,7 @@ YuneMusic erscheint automatisch als Media-App in Android Auto. Die Browse-Hierar
 
 - **Zuletzt gehört** — die letzten 30 gespielten Tracks
 - **Geliked** — alle gelikten Tracks
-- **Warteschlange** — aktuelle Wiedergabeliste (nur sichtbar wenn befüllt)
+- **Warteschlange** — aktuelle Wiedergabeliste; wird automatisch vom Radio-Algorithmus mit verwandten Tracks befüllt und wächst endlos weiter
 
 Tracks können direkt aus Auto heraus abgespielt werden. Sprachbefehle ("Hey Google, spiel … auf YuneMusic") werden über `onPlayFromSearch` weitergeleitet.
 
