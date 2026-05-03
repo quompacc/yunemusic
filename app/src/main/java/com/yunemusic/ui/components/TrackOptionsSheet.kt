@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.PlaylistAddCheck
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -89,9 +91,9 @@ fun TrackOptionsSheet(
 
             OptionItem(Icons.Default.PlayArrow, "Jetzt abspielen") { onPlayNow(); onDismiss() }
             OptionItem(Icons.Default.SkipNext, "Als Nächstes abspielen") { onPlayNext(); onDismiss() }
-            OptionItem(Icons.Default.PlaylistAdd, "Zur Warteschlange") { onAddToQueue(); onDismiss() }
+            OptionItem(Icons.AutoMirrored.Filled.PlaylistAdd, "Zur Warteschlange") { onAddToQueue(); onDismiss() }
             if (onAddToPlaylist != null) {
-                OptionItem(Icons.Default.PlaylistAddCheck, "Zur Playlist hinzufügen") {
+                OptionItem(Icons.AutoMirrored.Filled.PlaylistAddCheck, "Zur Playlist hinzufügen") {
                     onDismiss(); onAddToPlaylist()
                 }
             }

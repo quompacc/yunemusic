@@ -9,6 +9,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -140,7 +142,7 @@ fun LibraryScreen(
                 if (uiState.selectedPlaylist != null) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { viewModel.deselectPlaylist() }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Zurück", tint = TextPrimary)
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück", tint = TextPrimary)
                         }
                         Text(
                             text = uiState.selectedPlaylist!!.name,
@@ -166,7 +168,7 @@ fun LibraryScreen(
             containerColor = DarkBackground,
             contentColor = VioletPrimary,
             indicator = { tabPositions ->
-                TabRowDefaults.Indicator(
+                TabRowDefaults.SecondaryIndicator(
                     modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
                     color = VioletPrimary
                 )
@@ -264,7 +266,7 @@ private fun PlaylistListView(
     Box(modifier = Modifier.fillMaxSize()) {
         if (playlists.isEmpty()) {
             EmptyState(
-                icon = Icons.Default.PlaylistPlay,
+                icon = Icons.AutoMirrored.Filled.PlaylistPlay,
                 message = "Noch keine Playlists",
                 subtitle = "Tippe + um eine Playlist zu erstellen"
             )
@@ -335,7 +337,7 @@ private fun PlaylistItem(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.PlaylistPlay,
+                imageVector = Icons.AutoMirrored.Filled.PlaylistPlay,
                 contentDescription = null,
                 tint = VioletLight,
                 modifier = Modifier.size(28.dp)
@@ -451,7 +453,7 @@ private fun PlaylistPickerSheet(
                         .padding(horizontal = 20.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.PlaylistPlay, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(22.dp))
+                    Icon(Icons.AutoMirrored.Filled.PlaylistPlay, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(22.dp))
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
                         Text(playlist.name, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
