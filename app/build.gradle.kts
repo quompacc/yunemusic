@@ -46,9 +46,6 @@ android {
         abi {
             isEnable = false
         }
-        density {
-            isEnable = false
-        }
     }
 
     compileOptions {
