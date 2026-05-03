@@ -1,5 +1,8 @@
 package com.yunemusic.data.repository
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.util.Log
 import com.yunemusic.data.local.dao.PlayEventDao
 import com.yunemusic.data.local.dao.PlaylistDao
@@ -8,6 +11,7 @@ import com.yunemusic.data.local.entities.PlaylistEntity
 import com.yunemusic.data.local.entities.toDomain
 import com.yunemusic.data.local.entities.toEntity
 import com.yunemusic.data.local.entities.toPlaylistTrack
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.yunemusic.data.local.entities.toTrack
 import com.yunemusic.data.preferences.UserPreferences
 import com.yunemusic.data.youtube.YouTubeRepository
@@ -26,6 +30,7 @@ import javax.inject.Singleton
 
 @Singleton
 class MusicRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val youTubeRepository: YouTubeRepository,
     private val trackDao: TrackDao,
     private val playEventDao: PlayEventDao,
@@ -43,8 +48,20 @@ class MusicRepositoryImpl @Inject constructor(
     override suspend fun getTrackDetails(videoId: String): Result<Track> =
         youTubeRepository.getTrackInfo(videoId)
 
-    override suspend fun getStreamUrl(videoId: String): Result<String> =
-        youTubeRepository.getAudioStreamUrl(videoId)
+    override suspend fun getStreamUrl(videoId: String): Result<String> {
+        val wifiOnly = userPreferences.wifiOnly.firstOrNull() ?: false
+        if (wifiOnly && !isOnWifi()) {
+            return Result.failure(Exception("Kein WLAN verfügbar. Streaming ist nur über WLAN erlaubt."))
+        }
+        val quality = userPreferences.audioQuality.firstOrNull() ?: 1
+        return youTubeRepository.getAudioStreamUrl(videoId, quality)
+    }
+
+    private fun isOnWifi(): Boolean {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork ?: return false) ?: return false
+        return caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+    }
 
     override fun getPlayHistory(): Flow<List<PlayEvent>> =
         playEventDao.getAllPlayEvents().map { it.map { e -> e.toDomain() } }

@@ -43,12 +43,19 @@ class YouTubeRepository @Inject constructor() {
         }.onFailure { Log.e(TAG, "getRelatedTracks failed: $videoId", it) }
     }
 
-    suspend fun getAudioStreamUrl(videoId: String): Result<String> = withContext(Dispatchers.IO) {
+    suspend fun getAudioStreamUrl(videoId: String, qualityIndex: Int = 2): Result<String> = withContext(Dispatchers.IO) {
         runCatching {
             val streamInfo = StreamInfo.getInfo("$YT_BASE$videoId")
             logStreamWarnings(videoId, streamInfo)
-            streamInfo.audioStreams
-                .maxByOrNull { it.averageBitrate }
+            val streams = streamInfo.audioStreams
+            val targetBps = when (qualityIndex) {
+                0 -> 128_000
+                1 -> 256_000
+                else -> Int.MAX_VALUE
+            }
+            // Pick highest bitrate up to target; fall back to lowest available
+            (streams.filter { it.averageBitrate <= targetBps }.maxByOrNull { it.averageBitrate }
+                ?: streams.minByOrNull { it.averageBitrate })
                 ?.content
                 ?: error("No audio stream found for $videoId")
         }.onFailure { Log.e(TAG, "getAudioStreamUrl failed: $videoId", it) }

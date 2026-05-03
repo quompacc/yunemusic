@@ -7,10 +7,12 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.yunemusic.domain.model.PlayEvent
 import com.yunemusic.domain.model.Track
 import com.yunemusic.domain.repository.MusicRepository
 import com.yunemusic.domain.usecase.PlayTrackUseCase
 import com.yunemusic.service.MusicService
+import com.yunemusic.service.TasteAnalyzer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
@@ -38,7 +40,8 @@ data class PlayerUiState(
 class PlayerViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val playTrackUseCase: PlayTrackUseCase,
-    private val repository: MusicRepository
+    private val repository: MusicRepository,
+    private val tasteAnalyzer: TasteAnalyzer
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PlayerUiState())
@@ -46,6 +49,7 @@ class PlayerViewModel @Inject constructor(
 
     private var musicService: MusicService? = null
     private var serviceBound = false
+    private var trackPlayStartMs: Long = 0L
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -108,6 +112,7 @@ class PlayerViewModel @Inject constructor(
     // ─── Öffentliche Playback-Funktionen ──────────────────────────────────────
 
     fun playTrack(track: Track) {
+        recordCurrentTrackEvent(skipped = true)
         val newQueue = listOf(track)
         _uiState.update { it.copy(queue = newQueue, currentQueueIndex = 0) }
         musicService?.setQueue(newQueue, 0)
@@ -116,6 +121,7 @@ class PlayerViewModel @Inject constructor(
 
     fun playQueue(tracks: List<Track>, startIndex: Int = 0) {
         if (tracks.isEmpty()) return
+        recordCurrentTrackEvent(skipped = true)
         _uiState.update { it.copy(queue = tracks, currentQueueIndex = startIndex) }
         musicService?.setQueue(tracks, startIndex)
         loadAndPlay(tracks[startIndex])
@@ -126,6 +132,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun skipNext() {
+        recordCurrentTrackEvent(skipped = true)
         val state = _uiState.value
         when {
             state.isShuffleEnabled && state.queue.size > 1 -> {
@@ -145,7 +152,12 @@ class PlayerViewModel @Inject constructor(
             musicService?.seekTo(0)
         } else {
             val idx = _uiState.value.currentQueueIndex
-            if (idx > 0) playFromQueue(idx - 1) else musicService?.seekTo(0)
+            if (idx > 0) {
+                recordCurrentTrackEvent(skipped = true)
+                playFromQueue(idx - 1)
+            } else {
+                musicService?.seekTo(0)
+            }
         }
     }
 
@@ -230,11 +242,13 @@ class PlayerViewModel @Inject constructor(
 
     private fun onTrackEndedNaturally() {
         val state = _uiState.value
+        if (state.repeatMode == RepeatMode.ONE) {
+            musicService?.seekTo(0)
+            musicService?.play()
+            return
+        }
+        recordCurrentTrackEvent(skipped = false)
         when {
-            state.repeatMode == RepeatMode.ONE -> {
-                musicService?.seekTo(0)
-                musicService?.play()
-            }
             state.isShuffleEnabled && state.queue.size > 1 -> {
                 val other = state.queue.indices.filter { it != state.currentQueueIndex }
                 playFromQueue(other.random())
@@ -262,6 +276,7 @@ class PlayerViewModel @Inject constructor(
                 .onSuccess { streamUrl ->
                     startServiceIfNeeded()
                     musicService?.playTrack(track, streamUrl)
+                    trackPlayStartMs = System.currentTimeMillis()
                     _uiState.update { it.copy(isLoading = false) }
                 }
                 .onFailure { error ->
@@ -270,6 +285,23 @@ class PlayerViewModel @Inject constructor(
                     }
                 }
         }
+    }
+
+    private fun recordCurrentTrackEvent(skipped: Boolean) {
+        val track = _uiState.value.currentTrack ?: return
+        if (trackPlayStartMs == 0L) return
+        val playedSec = ((System.currentTimeMillis() - trackPlayStartMs) / 1000)
+            .toInt()
+            .coerceAtMost(track.durationSeconds)
+        val event = PlayEvent(
+            trackId = track.id,
+            playedSeconds = playedSec,
+            totalSeconds = track.durationSeconds,
+            skipped = skipped,
+            liked = _uiState.value.isLiked
+        )
+        tasteAnalyzer.onTrackPlayed(track, event)
+        trackPlayStartMs = 0L
     }
 
     private fun loadRadioTracks(seedTrack: Track?) {
@@ -313,6 +345,7 @@ class PlayerViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
+        recordCurrentTrackEvent(skipped = true)
         musicService?.callback = null
         if (serviceBound) {
             context.unbindService(serviceConnection)

@@ -158,7 +158,7 @@ fun CarModeScreen(
             // Progress Bar
             Column(modifier = Modifier.fillMaxWidth()) {
                 LinearProgressIndicator(
-                    progress = uiState.progress,
+                    progress = { uiState.progress },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(4.dp)

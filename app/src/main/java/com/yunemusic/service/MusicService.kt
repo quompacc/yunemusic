@@ -65,7 +65,6 @@ class MusicService : MediaBrowserServiceCompat() {
         const val ACTION_STOP = "com.yunemusic.ACTION_STOP"
     }
 
-    @Inject lateinit var tasteAnalyzer: TasteAnalyzer
     @Inject lateinit var repository: MusicRepository
     @Inject lateinit var userPreferences: UserPreferences
 
