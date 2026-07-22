@@ -219,7 +219,7 @@ fun CarModeScreen(
                     ),
                     shape = CircleShape
                 ) {
-                    if (uiState.isLoading) {
+                    if (uiState.isLoading || uiState.isLoadingRadio || uiState.isBuffering) {
                         CircularProgressIndicator(
                             color = OnPrimary,
                             modifier = Modifier.size(40.dp),

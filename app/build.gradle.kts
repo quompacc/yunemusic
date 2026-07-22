@@ -23,8 +23,8 @@ android {
         minSdk = 26
         targetSdk = 34
         // CI (Gitea Actions) setzt -PciVersionCode/-PciVersionName pro Build
-        versionCode = (project.findProperty("ciVersionCode") as? String)?.toIntOrNull() ?: 4
-        versionName = (project.findProperty("ciVersionName") as? String) ?: "1.2"
+        versionCode = (project.findProperty("ciVersionCode") as? String)?.toIntOrNull() ?: 5
+        versionName = (project.findProperty("ciVersionName") as? String) ?: "1.2.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

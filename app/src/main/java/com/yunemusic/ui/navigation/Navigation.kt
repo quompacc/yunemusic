@@ -102,6 +102,7 @@ fun YuneMusicNavHost() {
                             MiniPlayer(
                                 track = track,
                                 isPlaying = playerUiState.isPlaying,
+                                isBusy = playerUiState.isLoading || playerUiState.isBuffering,
                                 progress = playerUiState.progress,
                                 onPlayPause = { playerViewModel.togglePlayPause() },
                                 onSkipNext = { playerViewModel.skipNext() },

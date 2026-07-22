@@ -90,6 +90,9 @@ class MusicService : MediaBrowserServiceCompat() {
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
+    private val _isBuffering = MutableStateFlow(false)
+    val isBuffering: StateFlow<Boolean> = _isBuffering.asStateFlow()
+
     private val _progress = MutableStateFlow(0f)
     val progress: StateFlow<Float> = _progress.asStateFlow()
 
@@ -177,6 +180,7 @@ class MusicService : MediaBrowserServiceCompat() {
         exoPlayer.apply {
             addListener(object : Player.Listener {
                 override fun onPlaybackStateChanged(state: Int) {
+                    _isBuffering.value = state == Player.STATE_BUFFERING
                     updatePlaybackState()
                     if (state == Player.STATE_ENDED) {
                         queueManager.onTrackEnded()

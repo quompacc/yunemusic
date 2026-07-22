@@ -38,6 +38,7 @@ data class PlayerUiState(
     val downloadStatus: String = "",
     val isLoading: Boolean = false,
     val isLoadingRadio: Boolean = false,
+    val isBuffering: Boolean = false,
     val error: String? = null,
     val showQueue: Boolean = false,
     val isShuffleEnabled: Boolean = false,
@@ -117,6 +118,7 @@ class PlayerViewModel @Inject constructor(
             track?.let { checkIfLiked(it.id) }
         }
         collect(service.isPlaying) { playing -> _uiState.update { it.copy(isPlaying = playing) } }
+        collect(service.isBuffering) { buffering -> _uiState.update { it.copy(isBuffering = buffering) } }
         collect(service.progress) { p -> _uiState.update { it.copy(progress = p) } }
         collect(qm.queue) { q -> _uiState.update { it.copy(queue = q) } }
         collect(qm.currentIndex) { i -> _uiState.update { it.copy(currentQueueIndex = i) } }

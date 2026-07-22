@@ -269,27 +269,27 @@ fun PlayerScreen(
                         style = MaterialTheme.typography.labelSmall,
                         color = TextTertiary
                     )
-                    // Feinjustierung: ±10 Sekunden spulen
+                    // Feinjustierung: ±30 Sekunden spulen
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
-                            onClick = { viewModel.seekBy(-10) },
+                            onClick = { viewModel.seekBy(-30) },
                             modifier = Modifier.size(40.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Replay10,
-                                contentDescription = "10 Sekunden zurück",
+                                imageVector = Icons.Default.Replay30,
+                                contentDescription = "30 Sekunden zurück",
                                 tint = TextSecondary,
                                 modifier = Modifier.size(26.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(24.dp))
                         IconButton(
-                            onClick = { viewModel.seekBy(10) },
+                            onClick = { viewModel.seekBy(30) },
                             modifier = Modifier.size(40.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Forward10,
-                                contentDescription = "10 Sekunden vor",
+                                imageVector = Icons.Default.Forward30,
+                                contentDescription = "30 Sekunden vor",
                                 tint = TextSecondary,
                                 modifier = Modifier.size(26.dp)
                             )
@@ -343,7 +343,7 @@ fun PlayerScreen(
                     colors = IconButtonDefaults.filledIconButtonColors(containerColor = VioletPrimary),
                     shape = CircleShape
                 ) {
-                    if (uiState.isLoading || uiState.isLoadingRadio) {
+                    if (uiState.isLoading || uiState.isLoadingRadio || uiState.isBuffering) {
                         CircularProgressIndicator(color = OnPrimary, modifier = Modifier.size(32.dp), strokeWidth = 3.dp)
                     } else {
                         Icon(

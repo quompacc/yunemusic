@@ -23,6 +23,7 @@ import com.yunemusic.ui.theme.*
 fun MiniPlayer(
     track: Track,
     isPlaying: Boolean,
+    isBusy: Boolean = false,
     progress: Float,
     onPlayPause: () -> Unit,
     onSkipNext: () -> Unit,
@@ -104,14 +105,22 @@ fun MiniPlayer(
                 )
             }
 
-            // Play / Pause
+            // Play / Pause — beim Laden/Puffern Spinner statt "pausiert"-Optik
             IconButton(onClick = onPlayPause) {
-                Icon(
-                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlaying) "Pause" else "Abspielen",
-                    tint = VioletLight,
-                    modifier = Modifier.size(30.dp)
-                )
+                if (isBusy) {
+                    CircularProgressIndicator(
+                        color = VioletLight,
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.5.dp
+                    )
+                } else {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (isPlaying) "Pause" else "Abspielen",
+                        tint = VioletLight,
+                        modifier = Modifier.size(30.dp)
+                    )
+                }
             }
         }
     }
