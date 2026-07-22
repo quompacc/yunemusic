@@ -19,3 +19,6 @@ captures/
 
 # Generated
 app/build/
+
+# Build-Logs
+build_log.txt

@@ -27,12 +27,14 @@ import com.yunemusic.ui.theme.*
 @Composable
 fun TrackOptionsSheet(
     track: Track,
+    isDownloaded: Boolean = false,
     onDismiss: () -> Unit,
     onPlayNow: () -> Unit,
     onPlayNext: () -> Unit,
     onAddToQueue: () -> Unit,
     onAddToPlaylist: (() -> Unit)? = null,
     onLibraryToggle: (() -> Unit)? = null,
+    onDownloadToggle: (() -> Unit)? = null,
     libraryActionLabel: String = "Zur Bibliothek hinzufügen"
 ) {
     ModalBottomSheet(
@@ -100,6 +102,17 @@ fun TrackOptionsSheet(
             if (onLibraryToggle != null) {
                 OptionItem(Icons.Default.FavoriteBorder, libraryActionLabel) {
                     onLibraryToggle(); onDismiss()
+                }
+            }
+            if (onDownloadToggle != null) {
+                if (isDownloaded) {
+                    OptionItem(Icons.Default.DeleteOutline, "Download entfernen", tint = ErrorRed) {
+                        onDownloadToggle(); onDismiss()
+                    }
+                } else {
+                    OptionItem(Icons.Default.Download, "Offline herunterladen") {
+                        onDownloadToggle(); onDismiss()
+                    }
                 }
             }
         }
