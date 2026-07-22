@@ -59,6 +59,41 @@ abstract class YuneMusicDatabase : RoomDatabase() {
 
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
+                // Selbstheilung für Schema-Drift: Installationen aus der Entwicklungszeit
+                // hatten teils Version 3 OHNE diese Tabellen — Room validiert nach der
+                // Migration das Gesamtschema und crasht sonst beim App-Start
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS downloads (
+                        videoId TEXT PRIMARY KEY NOT NULL,
+                        title TEXT NOT NULL,
+                        channelName TEXT NOT NULL,
+                        thumbnailUrl TEXT NOT NULL,
+                        durationSeconds INTEGER NOT NULL,
+                        filePath TEXT NOT NULL,
+                        downloadedAt INTEGER NOT NULL
+                    )
+                """.trimIndent())
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS playlists (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        name TEXT NOT NULL,
+                        createdAt INTEGER NOT NULL
+                    )
+                """.trimIndent())
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS playlist_tracks (
+                        playlistId INTEGER NOT NULL,
+                        trackId TEXT NOT NULL,
+                        trackTitle TEXT NOT NULL,
+                        trackChannelName TEXT NOT NULL,
+                        trackThumbnailUrl TEXT NOT NULL,
+                        trackDurationSeconds INTEGER NOT NULL,
+                        position INTEGER NOT NULL,
+                        addedAt INTEGER NOT NULL,
+                        PRIMARY KEY(playlistId, trackId)
+                    )
+                """.trimIndent())
+
                 // play_events wird pro Wiedergabe größer — ohne Indizes werden
                 // Empfehlungen/History mit der Zeit spürbar langsam
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_play_events_trackId ON play_events(trackId)")
