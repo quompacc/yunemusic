@@ -21,6 +21,10 @@ interface TrackDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTrack(track: TrackEntity)
 
+    /** Legt den Track nur an, wenn er noch nicht existiert (atomar, kein Check-then-Act-Race) */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertTrackIfAbsent(track: TrackEntity)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTracks(tracks: List<TrackEntity>)
 

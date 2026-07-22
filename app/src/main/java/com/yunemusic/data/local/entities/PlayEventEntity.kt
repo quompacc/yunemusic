@@ -1,10 +1,14 @@
 package com.yunemusic.data.local.entities
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.yunemusic.domain.model.PlayEvent
 
-@Entity(tableName = "play_events")
+@Entity(
+    tableName = "play_events",
+    indices = [Index("trackId"), Index("timestamp")]
+)
 data class PlayEventEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val trackId: String,

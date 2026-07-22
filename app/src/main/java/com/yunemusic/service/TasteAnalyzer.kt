@@ -9,6 +9,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -32,15 +34,25 @@ class TasteAnalyzer @Inject constructor(
 
         // Early skip threshold: < 20% AND skipped
         private const val EARLY_SKIP_THRESHOLD = 0.20f
+
+        private const val MAX_DISLIKED = 50
+        private const val EVENT_RETENTION_MS = 90L * 24 * 60 * 60 * 1000  // 90 Tage
+        private const val CLEANUP_EVERY_N_PLAYS = 50
     }
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    // Read-Modify-Write aufs Profil serialisieren, sonst gehen bei zwei schnellen
+    // Play-Events (Skip + neuer Track) Updates verloren
+    private val profileMutex = Mutex()
 
     fun onTrackPlayed(track: Track, event: PlayEvent) {
         scope.launch {
             try {
                 repository.savePlayEvent(event)
-                updateProfile(track, event)
+                profileMutex.withLock {
+                    updateProfile(track, event)
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Error updating profile", e)
             }
@@ -82,7 +94,10 @@ class TasteAnalyzer @Inject constructor(
         val currentArtistScore = profile.favoriteArtists[track.channelName] ?: 0f
         val newDisliked = when {
             isEarlySkip && currentArtistScore < 1.0f ->
-                profile.dislikedArtists + track.channelName
+                // Cap: die ältesten Einträge fliegen raus, sonst wächst das Set unbegrenzt
+                (profile.dislikedArtists + track.channelName).let { set ->
+                    if (set.size > MAX_DISLIKED) set.drop(set.size - MAX_DISLIKED).toSet() else set
+                }
             positiveWeight >= WEIGHT_GOOD ->
                 profile.dislikedArtists - track.channelName  // un-dislike if user engages
             else -> profile.dislikedArtists
@@ -105,6 +120,11 @@ class TasteAnalyzer @Inject constructor(
                 lastUpdated = System.currentTimeMillis()
             )
         )
+
+        // play_events wächst sonst unbegrenzt (wurde bisher nirgends aufgeräumt)
+        if ((profile.playCount + 1) % CLEANUP_EVERY_N_PLAYS == 0) {
+            repository.deleteOldPlayEvents(System.currentTimeMillis() - EVENT_RETENTION_MS)
+        }
     }
 
     private fun decayMap(map: Map<String, Float>): Map<String, Float> =

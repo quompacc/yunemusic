@@ -3,6 +3,9 @@ package com.yunemusic.domain.usecase
 import com.yunemusic.domain.model.TasteProfile
 import com.yunemusic.domain.model.Track
 import com.yunemusic.domain.repository.MusicRepository
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import javax.inject.Inject
 
 class GetRecommendationsUseCase @Inject constructor(
@@ -11,39 +14,43 @@ class GetRecommendationsUseCase @Inject constructor(
     suspend operator fun invoke(): Result<List<Track>> = runCatching {
         val profile = repository.getTasteProfile()
         val playedIds = repository.getPlayedTrackIds()
-        val candidates = mutableListOf<ScoredTrack>()
 
-        // Strategy 1 – Related to liked/completed tracks (strongest personal signal)
-        if (profile.topTrackIds.isNotEmpty()) {
-            profile.topTrackIds.take(3).forEach { id ->
-                repository.getRelatedTracks(id).getOrElse { emptyList() }
-                    .forEach { candidates += ScoredTrack(it, scoreTrack(it, profile), Source.RELATED) }
-            }
-        }
-
-        // Strategy 2 – Search by top artists
-        profile.favoriteArtists.entries
-            .sortedByDescending { it.value }
-            .take(3)
-            .forEach { (artist, _) ->
-                repository.searchTracks("$artist music").getOrElse { emptyList() }
-                    .forEach { candidates += ScoredTrack(it, scoreTrack(it, profile), Source.ARTIST) }
-            }
-
-        // Strategy 3 – Genre exploration (kicks in after 10 plays)
-        if (profile.playCount >= 10) {
-            profile.favoriteGenres.entries
-                .sortedByDescending { it.value }
-                .take(2)
-                .forEach { (genre, _) ->
-                    repository.searchTracks("$genre music").getOrElse { emptyList() }
-                        .forEach { candidates += ScoredTrack(it, scoreTrack(it, profile), Source.GENRE) }
+        // Alle Strategien parallel laden (vorher bis zu 9 sequentielle Netzwerk-Calls,
+        // 10–20 s Ladezeit für den Empfehlungs-Screen)
+        val candidates = coroutineScope {
+            val related = profile.topTrackIds.take(3).map { id ->
+                async {
+                    repository.getRelatedTracks(id).getOrElse { emptyList() }
+                        .map { ScoredTrack(it, scoreTrack(it, profile), Source.RELATED) }
                 }
-        }
+            }
+            val artists = profile.favoriteArtists.entries
+                .sortedByDescending { it.value }
+                .take(3)
+                .map { (artist, _) ->
+                    async {
+                        repository.searchTracks("$artist music").getOrElse { emptyList() }
+                            .map { ScoredTrack(it, scoreTrack(it, profile), Source.ARTIST) }
+                    }
+                }
+            val genres = if (profile.playCount >= 10) {
+                profile.favoriteGenres.entries
+                    .sortedByDescending { it.value }
+                    .take(2)
+                    .map { (genre, _) ->
+                        async {
+                            repository.searchTracks("$genre music").getOrElse { emptyList() }
+                                .map { ScoredTrack(it, scoreTrack(it, profile), Source.GENRE) }
+                        }
+                    }
+            } else emptyList()
+            val trending = async {
+                repository.getTrending().getOrElse { emptyList() }
+                    .map { ScoredTrack(it, scoreTrack(it, profile), Source.TRENDING) }
+            }
 
-        // Strategy 4 – Trending (fallback for new users + discovery layer)
-        repository.getTrending().getOrElse { emptyList() }
-            .forEach { candidates += ScoredTrack(it, scoreTrack(it, profile), Source.TRENDING) }
+            (related + artists + genres + trending).awaitAll().flatten()
+        }
 
         // Filter, deduplicate, sort by score
         val filtered = candidates
