@@ -1,5 +1,4 @@
 import java.util.Properties
-import java.util.concurrent.TimeUnit
 
 plugins {
     id("com.android.application")
@@ -8,11 +7,6 @@ plugins {
     id("com.google.devtools.ksp")
     id("kotlin-parcelize")
     id("org.jetbrains.kotlin.plugin.serialization")
-}
-
-// SNAPSHOT immer frisch laden (für NewPipe dev-SNAPSHOT)
-configurations.all {
-    resolutionStrategy.cacheChangingModulesFor(0, TimeUnit.SECONDS)
 }
 
 val localProps = Properties().apply {
@@ -28,8 +22,9 @@ android {
         applicationId = "com.yunemusic"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        // CI (Gitea Actions) setzt -PciVersionCode/-PciVersionName pro Build
+        versionCode = (project.findProperty("ciVersionCode") as? String)?.toIntOrNull() ?: 1
+        versionName = (project.findProperty("ciVersionName") as? String) ?: "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -39,10 +34,11 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile     = rootProject.file(localProps["KEYSTORE_FILE"] as? String ?: "yunemusic.jks")
-            storePassword = localProps["KEYSTORE_PASSWORD"] as? String ?: ""
-            keyAlias      = localProps["KEY_ALIAS"]          as? String ?: ""
-            keyPassword   = localProps["KEY_PASSWORD"]       as? String ?: ""
+            // Umgebungsvariablen (CI) haben Vorrang vor local.properties (lokal)
+            storeFile     = rootProject.file(System.getenv("KEYSTORE_FILE") ?: localProps["KEYSTORE_FILE"] as? String ?: "yunemusic.jks")
+            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: localProps["KEYSTORE_PASSWORD"] as? String ?: ""
+            keyAlias      = System.getenv("KEY_ALIAS")         ?: localProps["KEY_ALIAS"]          as? String ?: ""
+            keyPassword   = System.getenv("KEY_PASSWORD")      ?: localProps["KEY_PASSWORD"]       as? String ?: ""
         }
     }
 
@@ -70,6 +66,7 @@ android {
     }
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -84,7 +81,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.4"
+        kotlinCompilerExtensionVersion = "1.5.8"
     }
 
     packaging {
@@ -116,6 +113,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.7.6")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
 
     // Media3 / ExoPlayer
     implementation("androidx.media3:media3-exoplayer:1.2.1")
@@ -124,7 +122,7 @@ dependencies {
     implementation("androidx.media:media:1.7.0")
 
     // NewPipe Extractor (YouTube anonym, kein API-Key)
-    // dev-SNAPSHOT = immer aktueller dev-Branch mit YouTube-Kompatibilität
+    // dev-SNAPSHOT für aktuelle YouTube-Kompatibilität; URLEncoder-Crash via coreLibraryDesugaring behoben
     implementation("com.github.TeamNewPipe:NewPipeExtractor:dev-SNAPSHOT") { isChanging = true }
     implementation("org.mozilla:rhino:1.7.15")
 
@@ -158,6 +156,9 @@ dependencies {
 
     // JSON
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
+
+    // Java Desugaring — stellt URLEncoder.encode(String, Charset) (Java 10+) auf Android zur Verfügung
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

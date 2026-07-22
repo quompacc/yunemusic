@@ -72,6 +72,36 @@ cd yunemusic-app
 
 `local.properties` wird nicht versioniert — Android Studio legt die Datei beim ersten Öffnen automatisch an.
 
+## Automatische NewPipe-Updates (CI)
+
+YouTube ändert alle paar Wochen seine interne API — dann bricht der einkompilierte
+NewPipe Extractor und die installierte APK spielt nichts mehr ab, bis mit dem
+neuesten `dev-SNAPSHOT` neu gebaut wird. Das übernimmt
+[`.gitea/workflows/newpipe-healthcheck.yml`](.gitea/workflows/newpipe-healthcheck.yml):
+
+1. **Täglich um 04:17 UTC**: Smoke-Test ([`NewPipeSmokeTest`](app/src/test/java/com/yunemusic/smoke/NewPipeSmokeTest.kt))
+   gegen die echte YouTube-API mit dem jeweils neuesten NewPipe-SNAPSHOT
+   (`--refresh-dependencies`) — geprüft werden Suche, Stream-Extraktion
+   (inkl. tatsächlichem HTTP-Abruf der Audio-URL) und Related Tracks.
+2. **Bei Erfolg**: signierte Release-APK bauen und als rollendes
+   **`nightly`-Release** in Gitea veröffentlichen.
+3. **Bei Fehlschlag**: automatisch ein Issue anlegen — das heißt: YouTube hat etwas
+   geändert und TeamNewPipe hat den Fix noch nicht veröffentlicht. Sobald der Fix
+   im SNAPSHOT ist, baut der nächste Lauf automatisch wieder eine funktionierende APK.
+
+### Einrichtung (einmalig)
+
+1. In Gitea muss ein Actions-Runner aktiv sein (Label `ubuntu-latest`).
+2. Repo → Einstellungen → Actions → Secrets anlegen:
+   - `KEYSTORE_B64` — `base64 -w0 yunemusic.jks`
+   - `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`
+3. Aufs Handy: [Obtainium](https://github.com/ImranR98/Obtainium) installieren und
+   als Quelle die Gitea-Release-URL des Repos eintragen — dann meldet sich das
+   Handy von selbst, sobald eine neue Nightly-APK bereitliegt.
+
+Das Workflow-Format ist GitHub-kompatibel: für GitHub Actions die Datei einfach
+nach `.github/workflows/` kopieren.
+
 ## Android Auto
 
 YuneMusic erscheint automatisch als Media-App in Android Auto. Die Browse-Hierarchie zeigt:

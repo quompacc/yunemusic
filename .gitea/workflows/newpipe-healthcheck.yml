@@ -1,0 +1,129 @@
+# NewPipe Health-Check & Auto-Build
+#
+# Problem: Der NewPipe Extractor bricht alle paar Wochen, wenn YouTube seine
+# interne API ändert. Die installierte APK hat den Extractor fest einkompiliert
+# und funktioniert dann nicht mehr, bis mit dem neuesten dev-SNAPSHOT neu
+# gebaut wird.
+#
+# Lösung: Dieser Workflow läuft täglich und
+#   1. lädt den NEUESTEN NewPipe dev-SNAPSHOT (--refresh-dependencies)
+#   2. führt einen Smoke-Test gegen die echte YouTube-API aus (Suche,
+#      Stream-Extraktion, Related Tracks)
+#   3. baut bei Erfolg eine signierte Release-APK und veröffentlicht sie als
+#      rollendes "nightly"-Release in Gitea
+#   4. legt bei Fehlschlag automatisch ein Issue an (= Benachrichtigung, dass
+#      YouTube etwas geändert hat und der NewPipe-Fix noch aussteht)
+#
+# Benötigte Repository-Secrets (Gitea → Repo → Einstellungen → Actions → Secrets):
+#   KEYSTORE_B64       — Keystore base64-kodiert:  base64 -w0 yunemusic.jks
+#   KEYSTORE_PASSWORD  — Keystore-Passwort
+#   KEY_ALIAS          — Key-Alias
+#   KEY_PASSWORD       — Key-Passwort
+#
+# Hinweis: Das Format ist GitHub-Actions-kompatibel. Für GitHub einfach nach
+# .github/workflows/ kopieren.
+
+name: NewPipe Health-Check & Auto-Build
+
+on:
+  schedule:
+    - cron: '17 4 * * *'   # täglich 04:17 UTC
+  workflow_dispatch: {}
+
+jobs:
+  healthcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: JDK 17 einrichten
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle-Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
+
+      - name: Smoke-Test mit aktuellem NewPipe dev-SNAPSHOT
+        run: |
+          chmod +x gradlew
+          ./gradlew --refresh-dependencies --no-daemon \
+            :app:testDebugUnitTest --tests "com.yunemusic.smoke.NewPipeSmokeTest"
+
+      - name: Issue bei Fehlschlag anlegen
+        if: failure()
+        run: |
+          TITLE="⚠️ NewPipe Health-Check fehlgeschlagen ($(date +%Y-%m-%d))"
+          BODY="Der tägliche Extractor-Smoke-Test ist fehlgeschlagen. Vermutlich hat YouTube etwas geändert und der NewPipe dev-SNAPSHOT enthält noch keinen Fix.\n\nSobald TeamNewPipe den Extractor repariert hat, wird der nächste erfolgreiche Lauf automatisch eine neue APK bauen.\n\nRun: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_number }}"
+          curl -sf -X POST \
+            "${{ github.server_url }}/api/v1/repos/${{ github.repository }}/issues" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"title\": \"${TITLE}\", \"body\": \"${BODY}\"}" || true
+
+  build-release:
+    needs: healthcheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: JDK 17 einrichten
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle-Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
+
+      - name: Keystore aus Secret wiederherstellen
+        run: echo "${{ secrets.KEYSTORE_B64 }}" | base64 -d > yunemusic.jks
+
+      - name: Signierte Release-APK bauen (frischer NewPipe-SNAPSHOT)
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew --refresh-dependencies --no-daemon \
+            -PciVersionCode=${{ github.run_number }} \
+            -PciVersionName="1.0.${{ github.run_number }}" \
+            :app:assembleRelease
+          mv app/build/outputs/apk/release/app-release.apk \
+             yunemusic-1.0.${{ github.run_number }}.apk
+
+      - name: Rollendes "nightly"-Release aktualisieren
+        run: |
+          API="${{ github.server_url }}/api/v1/repos/${{ github.repository }}"
+          AUTH="Authorization: token ${{ secrets.GITHUB_TOKEN }}"
+
+          # Altes nightly-Release + Tag entfernen (Fehler ignorieren, falls nicht vorhanden)
+          RELEASE_ID=$(curl -sf -H "$AUTH" "$API/releases/tags/nightly" | python3 -c "import sys,json;print(json.load(sys.stdin)['id'])" 2>/dev/null || true)
+          if [ -n "$RELEASE_ID" ]; then
+            curl -sf -X DELETE -H "$AUTH" "$API/releases/$RELEASE_ID" || true
+            curl -sf -X DELETE -H "$AUTH" "$API/tags/nightly" || true
+          fi
+
+          # Neues Release anlegen
+          NEW_ID=$(curl -sf -X POST -H "$AUTH" -H "Content-Type: application/json" \
+            -d "{\"tag_name\": \"nightly\", \"name\": \"Nightly 1.0.${{ github.run_number }}\", \"body\": \"Automatischer Build mit aktuellem NewPipe dev-SNAPSHOT. Smoke-Test gegen YouTube bestanden.\", \"prerelease\": true}" \
+            "$API/releases" | python3 -c "import sys,json;print(json.load(sys.stdin)['id'])")
+
+          # APK anhängen
+          curl -sf -X POST -H "$AUTH" \
+            -F "attachment=@yunemusic-1.0.${{ github.run_number }}.apk" \
+            "$API/releases/$NEW_ID/assets?name=yunemusic-1.0.${{ github.run_number }}.apk"
