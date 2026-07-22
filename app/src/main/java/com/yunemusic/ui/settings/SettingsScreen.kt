@@ -7,12 +7,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationManagerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yunemusic.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -21,8 +26,9 @@ fun SettingsScreen(
     onCarModeNavigate: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showResetDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     if (showResetDialog) {
         AlertDialog(
@@ -93,7 +99,7 @@ fun SettingsScreen(
                             color = TextPrimary
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        val qualities = listOf("128 kbps", "256 kbps", "320 kbps")
+                        val qualities = listOf("Niedrig (~128 kbps)", "Mittel (~256 kbps)", "Hoch (Beste Qualität)")
                         qualities.forEachIndexed { index, label ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -148,6 +154,59 @@ fun SettingsScreen(
                         Switch(
                             checked = uiState.loudnessLimiter,
                             onCheckedChange = { viewModel.updateLoudnessLimiter(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = OnPrimary,
+                                checkedTrackColor = VioletPrimary,
+                                uncheckedThumbColor = TextSecondary,
+                                uncheckedTrackColor = OutlineDark
+                            )
+                        )
+                    }
+                }
+            }
+
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardDark),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Bei Benachrichtigungen leiser",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = "Musik wird kurz leiser, wenn Nachrichten eintreffen. Benötigt Benachrichtigungszugriff.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextTertiary
+                            )
+                        }
+                        Switch(
+                            checked = uiState.duckOnNotification,
+                            onCheckedChange = { enabled ->
+                                viewModel.updateDuckOnNotification(enabled)
+                                if (enabled) {
+                                    val hasAccess = NotificationManagerCompat
+                                        .getEnabledListenerPackages(context)
+                                        .contains(context.packageName)
+                                    if (!hasAccess) {
+                                        context.startActivity(
+                                            Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+                                        )
+                                    }
+                                }
+                            },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = OnPrimary,
                                 checkedTrackColor = VioletPrimary,

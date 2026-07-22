@@ -14,6 +14,7 @@ data class SettingsUiState(
     val wifiOnly: Boolean = false,
     val carModeTrigger: String = "manual",
     val loudnessLimiter: Boolean = true,
+    val duckOnNotification: Boolean = true,
     val message: String? = null,
     val isError: Boolean = false
 )
@@ -33,17 +34,33 @@ class SettingsViewModel @Inject constructor(
                 userPreferences.audioQuality,
                 userPreferences.wifiOnly,
                 userPreferences.carModeTrigger,
-                userPreferences.loudnessLimiter
-            ) { quality, wifiOnly, trigger, limiter ->
-                SettingsUiState(
-                    audioQuality = quality,
-                    wifiOnly = wifiOnly,
-                    carModeTrigger = trigger,
-                    loudnessLimiter = limiter
-                )
-            }.collect { _uiState.value = it }
+                userPreferences.loudnessLimiter,
+                userPreferences.duckOnNotification
+            ) { quality, wifiOnly, trigger, limiter, duck ->
+                Prefs(quality, wifiOnly, trigger, limiter, duck)
+            }.collect { prefs ->
+                // copy() statt Komplett-Zuweisung, damit eine sichtbare message
+                // nicht von Preference-Emissionen weggewischt wird
+                _uiState.update {
+                    it.copy(
+                        audioQuality = prefs.quality,
+                        wifiOnly = prefs.wifiOnly,
+                        carModeTrigger = prefs.trigger,
+                        loudnessLimiter = prefs.limiter,
+                        duckOnNotification = prefs.duck
+                    )
+                }
+            }
         }
     }
+
+    private data class Prefs(
+        val quality: Int,
+        val wifiOnly: Boolean,
+        val trigger: String,
+        val limiter: Boolean,
+        val duck: Boolean
+    )
 
     fun updateAudioQuality(quality: Int) {
         viewModelScope.launch { userPreferences.setAudioQuality(quality) }
@@ -59,6 +76,10 @@ class SettingsViewModel @Inject constructor(
 
     fun updateLoudnessLimiter(enabled: Boolean) {
         viewModelScope.launch { userPreferences.setLoudnessLimiter(enabled) }
+    }
+
+    fun updateDuckOnNotification(enabled: Boolean) {
+        viewModelScope.launch { userPreferences.setDuckOnNotification(enabled) }
     }
 
     fun resetTasteProfile() {

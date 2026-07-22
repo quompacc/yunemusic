@@ -24,6 +24,7 @@ class UserPreferences @Inject constructor(
         val KEY_CAR_MODE_TRIGGER = stringPreferencesKey("car_mode_trigger") // bluetooth, manual
         val KEY_TASTE_PROFILE_JSON = stringPreferencesKey("taste_profile_json")
         val KEY_LOUDNESS_LIMITER = booleanPreferencesKey("loudness_limiter")
+        val KEY_DUCK_ON_NOTIFICATION = booleanPreferencesKey("duck_on_notification")
     }
 
     val audioQuality: Flow<Int> = context.dataStore.data
@@ -54,6 +55,13 @@ class UserPreferences @Inject constructor(
         }
         .map { prefs -> prefs[KEY_LOUDNESS_LIMITER] ?: true }
 
+    val duckOnNotification: Flow<Boolean> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) emit(emptyPreferences())
+            else throw exception
+        }
+        .map { prefs -> prefs[KEY_DUCK_ON_NOTIFICATION] ?: true }
+
     val tasteProfileJson: Flow<String> = context.dataStore.data
         .catch { exception ->
             if (exception is IOException) emit(emptyPreferences())
@@ -82,6 +90,12 @@ class UserPreferences @Inject constructor(
     suspend fun setLoudnessLimiter(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_LOUDNESS_LIMITER] = enabled
+        }
+    }
+
+    suspend fun setDuckOnNotification(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_DUCK_ON_NOTIFICATION] = enabled
         }
     }
 

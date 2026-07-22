@@ -51,6 +51,17 @@
             </intent-filter>
         </service>
 
+        <!-- Ducking: Musik wird bei eingehenden Benachrichtigungen kurz leiser.
+             Benötigt vom User erteilten Benachrichtigungszugriff (Settings-Toggle). -->
+        <service
+            android:name=".service.NotificationDuckService"
+            android:exported="false"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
         <receiver
             android:name="androidx.media.session.MediaButtonReceiver"
             android:exported="true">
