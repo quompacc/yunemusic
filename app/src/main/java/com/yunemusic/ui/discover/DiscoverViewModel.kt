@@ -11,6 +11,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException
+import org.schabi.newpipe.extractor.exceptions.ExtractionException
+import org.schabi.newpipe.extractor.exceptions.ReCaptchaException
+import java.io.IOException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import javax.inject.Inject
 
 data class SmartMix(
@@ -79,7 +85,7 @@ class DiscoverViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoadingRecommendations = false,
-                            error = error.message ?: "Failed to load recommendations"
+                            error = mapErrorMessage(error)
                         )
                     }
                 }
@@ -163,7 +169,7 @@ class DiscoverViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoadingSearch = false,
-                            error = error.message ?: "Search failed"
+                            error = mapErrorMessage(error)
                         )
                     }
                 }
@@ -189,6 +195,26 @@ class DiscoverViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.update { it.copy(error = null) }
+    }
+
+    /**
+     * Mappt technische Exceptions (inkl. Ursachenkette) auf verständliche deutsche Meldungen.
+     */
+    private fun mapErrorMessage(error: Throwable): String {
+        val chain = generateSequence(error) { it.cause }.take(10).toList()
+        return when {
+            chain.any { it is UnknownHostException || it is SocketTimeoutException } ->
+                "Keine Internetverbindung"
+            chain.any { it is ReCaptchaException } ->
+                "YouTube blockiert vorübergehend Anfragen — später erneut versuchen"
+            chain.any { it is ContentNotAvailableException } ->
+                "Video nicht verfügbar"
+            chain.any { it is IOException } ->
+                "Keine Internetverbindung"
+            chain.any { it is ExtractionException } ->
+                "YouTube-Abruf fehlgeschlagen — vermutlich hat YouTube etwas geändert (App-Update nötig)"
+            else -> "Ein Fehler ist aufgetreten"
+        }
     }
 
     private fun observeRecentTracks() {

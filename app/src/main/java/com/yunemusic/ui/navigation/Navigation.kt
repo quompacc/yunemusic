@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -81,7 +82,7 @@ fun YuneMusicNavHost() {
     )
 
     val playerViewModel: PlayerViewModel = hiltViewModel()
-    val playerUiState by playerViewModel.uiState.collectAsState()
+    val playerUiState by playerViewModel.uiState.collectAsStateWithLifecycle()
 
     fun navigateToPlayer() {
         navController.navigate(Screen.Player.route) { launchSingleTop = true }
@@ -169,6 +170,7 @@ fun YuneMusicNavHost() {
                     onPlayNext = { track -> playerViewModel.playNext(track) },
                     onAddToQueue = { track -> playerViewModel.addToQueue(track) },
                     onAddToLibrary = { track -> playerViewModel.likeTrackDirect(track) },
+                    onDownload = { track -> playerViewModel.downloadTrack(track) },
                     onPlayAll = { tracks ->
                         playerViewModel.setShuffle(false)
                         playerViewModel.playQueue(tracks, 0)

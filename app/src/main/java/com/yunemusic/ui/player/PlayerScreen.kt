@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.yunemusic.ui.theme.*
 
@@ -32,7 +33,7 @@ fun PlayerScreen(
     onQueueClick: () -> Unit,
     viewModel: PlayerViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Box(
         modifier = Modifier
@@ -131,7 +132,7 @@ fun PlayerScreen(
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // Track Info + Like button
+            // Track Info + Like + Download buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -155,27 +156,84 @@ fun PlayerScreen(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 IconButton(
                     onClick = { viewModel.toggleLike() },
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(44.dp)
                 ) {
                     Icon(
                         imageVector = if (uiState.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         contentDescription = if (uiState.isLiked) "Unlike" else "Like",
                         tint = if (uiState.isLiked) LikeRed else TextSecondary,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(26.dp)
                     )
                 }
+                if (uiState.currentTrack != null) {
+                    IconButton(
+                        onClick = {
+                            val track = uiState.currentTrack ?: return@IconButton
+                            when {
+                                uiState.isDownloading -> viewModel.cancelDownload()
+                                uiState.isDownloaded -> viewModel.deleteDownload(track.id)
+                                else -> viewModel.downloadTrack(track)
+                            }
+                        },
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        if (uiState.isDownloading) {
+                            // Fortschrittsbalken mit X zum Abbrechen
+                            Box(contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(
+                                    progress = { uiState.downloadProgress },
+                                    modifier = Modifier.size(26.dp),
+                                    color = VioletPrimary,
+                                    strokeWidth = 3.dp,
+                                    trackColor = OutlineDark
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Abbrechen",
+                                    tint = TextPrimary,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                        } else {
+                            Icon(
+                                imageVector = if (uiState.isDownloaded) Icons.Default.DownloadDone else Icons.Default.Download,
+                                contentDescription = if (uiState.isDownloaded) "Download entfernen" else "Download",
+                                tint = if (uiState.isDownloaded) VioletPrimary else TextSecondary,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Download-Status-Text
+            if (uiState.isDownloading && uiState.downloadStatus.isNotEmpty()) {
+                Text(
+                    text = uiState.downloadStatus,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = VioletPrimary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 4.dp),
+                    textAlign = TextAlign.Center
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Progress Slider
+            // Progress Slider — seekt erst beim Loslassen, nicht bei jedem Drag-Pixel
+            var dragProgress by remember { mutableStateOf<Float?>(null) }
             Column(modifier = Modifier.fillMaxWidth()) {
                 Slider(
-                    value = uiState.progress,
-                    onValueChange = { viewModel.seekTo(it) },
+                    value = dragProgress ?: uiState.progress,
+                    onValueChange = { dragProgress = it },
+                    onValueChangeFinished = {
+                        dragProgress?.let { viewModel.seekTo(it) }
+                        dragProgress = null
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     colors = SliderDefaults.colors(
                         thumbColor = VioletPrimary,
@@ -188,7 +246,7 @@ fun PlayerScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     val duration = uiState.currentTrack?.durationSeconds ?: 0
-                    val current = (uiState.progress * duration).toInt()
+                    val current = ((dragProgress ?: uiState.progress) * duration).toInt()
                     Text(
                         text = formatDuration(current),
                         style = MaterialTheme.typography.labelSmall,

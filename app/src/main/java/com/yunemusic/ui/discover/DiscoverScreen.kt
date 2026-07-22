@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.yunemusic.domain.model.Track
 import com.yunemusic.ui.components.TrackOptionsSheet
@@ -44,11 +45,12 @@ fun DiscoverScreen(
     onPlayNext: (Track) -> Unit = {},
     onAddToQueue: (Track) -> Unit = {},
     onAddToLibrary: (Track) -> Unit = {},
+    onDownload: (Track) -> Unit = {},
     onPlayAll: (List<Track>) -> Unit = {},
     onShuffleAll: (List<Track>) -> Unit = {},
     viewModel: DiscoverViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var trackWithOptions by remember { mutableStateOf<Track?>(null) }
     var showSearch by remember { mutableStateOf(false) }
     val pagerState = rememberPagerState(pageCount = { uiState.featuredTracks.size })
@@ -71,7 +73,8 @@ fun DiscoverScreen(
             onPlayNext = { onPlayNext(track) },
             onAddToQueue = { onAddToQueue(track) },
             onLibraryToggle = { onAddToLibrary(track) },
-            libraryActionLabel = "Zur Bibliothek hinzufügen"
+            libraryActionLabel = "Zur Bibliothek hinzufügen",
+            onDownloadToggle = { onDownload(track) }
         )
     }
 
@@ -243,6 +246,49 @@ fun DiscoverScreen(
                             modifier = Modifier.fillMaxWidth().padding(40.dp),
                             contentAlignment = Alignment.Center
                         ) { CircularProgressIndicator(color = VioletPrimary) }
+                    }
+                } else if (uiState.error != null) {
+                    // Fehler bei der Suche
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Card(colors = CardDefaults.cardColors(containerColor = ErrorRed.copy(alpha = 0.15f))) {
+                            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Warning, null, tint = ErrorRed)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(uiState.error!!, color = ErrorRed, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                                IconButton(onClick = { viewModel.clearError() }) {
+                                    Icon(Icons.Default.Close, null, tint = ErrorRed)
+                                }
+                            }
+                        }
+                    }
+                } else if (uiState.searchResults.isEmpty()) {
+                    // Empty-State bei 0 Suchergebnissen
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 40.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SearchOff,
+                                contentDescription = null,
+                                tint = TextTertiary,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "Keine Ergebnisse für „${uiState.searchQuery}“",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = TextSecondary
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Versuche einen anderen Suchbegriff",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextTertiary
+                            )
+                        }
                     }
                 } else {
                     item(span = { GridItemSpan(maxLineSpan) }) {

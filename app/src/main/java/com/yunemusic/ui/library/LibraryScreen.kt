@@ -18,11 +18,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.yunemusic.domain.model.Playlist
 import com.yunemusic.domain.model.Track
+import com.yunemusic.domain.model.YouTubePlaylist
 import com.yunemusic.ui.components.TrackOptionsSheet
 import com.yunemusic.ui.discover.TrackListItem
 import com.yunemusic.ui.theme.*
@@ -37,7 +46,7 @@ fun LibraryScreen(
     onAddToQueue: (Track) -> Unit,
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedTab by remember { mutableIntStateOf(0) }
     var trackWithOptions by remember { mutableStateOf<Track?>(null) }
     var trackForPlaylist by remember { mutableStateOf<Track?>(null) }
@@ -45,16 +54,21 @@ fun LibraryScreen(
     var newPlaylistName by remember { mutableStateOf("") }
 
     // intercept back in playlist detail
-    if (uiState.selectedPlaylist != null) {
-        BackHandler { viewModel.deselectPlaylist() }
+    if (uiState.selectedPlaylist != null || uiState.ytSelectedPlaylist != null) {
+        BackHandler {
+            if (uiState.ytSelectedPlaylist != null) viewModel.deselectYouTubePlaylist()
+            else viewModel.deselectPlaylist()
+        }
     }
 
     // track options sheet
     trackWithOptions?.let { track ->
         val isInPlaylist = uiState.selectedPlaylist != null
         val isLiked = selectedTab == 0 && uiState.selectedPlaylist == null
+        val isDownloaded = selectedTab == 2
         TrackOptionsSheet(
             track = track,
+            isDownloaded = isDownloaded,
             onDismiss = { trackWithOptions = null },
             onPlayNow = { onTrackClick(track) },
             onPlayNext = { onPlayNext(track) },
@@ -63,6 +77,11 @@ fun LibraryScreen(
             onLibraryToggle = when {
                 isLiked -> ({ viewModel.unlikeTrack(track.id) })
                 isInPlaylist -> ({ viewModel.removeTrackFromPlaylist(track.id) })
+                else -> null
+            },
+            onDownloadToggle = when {
+                isDownloaded -> ({ viewModel.deleteDownload(track.id) })
+                isLiked -> null
                 else -> null
             },
             libraryActionLabel = if (isInPlaylist) "Aus Playlist entfernen" else "Aus Bibliothek entfernen"
@@ -82,10 +101,8 @@ fun LibraryScreen(
                 trackForPlaylist = null
                 showCreatePlaylistDialog = true
                 newPlaylistName = ""
-                // remember track so we can add after creation
             }
         )
-        // keep track stored for after-create add
     }
 
     // create playlist dialog
@@ -130,7 +147,7 @@ fun LibraryScreen(
         )
     }
 
-    val tabs = listOf("Geliked", "Verlauf", "Playlists")
+    val tabs = listOf("Geliked", "Verlauf", "Downloads", "Playlists")
 
     Column(
         modifier = Modifier
@@ -139,10 +156,24 @@ fun LibraryScreen(
     ) {
         TopAppBar(
             title = {
-                if (uiState.selectedPlaylist != null) {
+                if (uiState.ytSelectedPlaylist != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { viewModel.deselectYouTubePlaylist() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zur\u00fcck", tint = TextPrimary)
+                        }
+                        Text(
+                            text = uiState.ytSelectedPlaylist!!.title,
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                } else if (uiState.selectedPlaylist != null) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { viewModel.deselectPlaylist() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück", tint = TextPrimary)
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zur\u00fcck", tint = TextPrimary)
                         }
                         Text(
                             text = uiState.selectedPlaylist!!.name,
@@ -179,7 +210,10 @@ fun LibraryScreen(
                     selected = selectedTab == index,
                     onClick = {
                         selectedTab = index
-                        if (index != 2) viewModel.deselectPlaylist()
+                        if (index != 3) {
+                            viewModel.deselectPlaylist()
+                            viewModel.deselectYouTubePlaylist()
+                        }
                     },
                     text = {
                         Text(
@@ -207,168 +241,33 @@ fun LibraryScreen(
                 onShuffleAll = onShuffleAll,
                 onOptionsClick = { trackWithOptions = it }
             )
-            2 -> PlaylistsTab(
-                playlists = uiState.playlists,
-                selectedPlaylist = uiState.selectedPlaylist,
-                playlistTracks = uiState.selectedPlaylistTracks,
-                onPlaylistClick = { viewModel.selectPlaylist(it) },
-                onDeletePlaylist = { viewModel.deletePlaylist(it) },
-                onCreatePlaylist = { showCreatePlaylistDialog = true; newPlaylistName = "" },
+            2 -> DownloadsTab(
+                tracks = uiState.downloadedTracks,
                 onTrackClick = onTrackClick,
                 onPlayAll = onPlayAll,
                 onShuffleAll = onShuffleAll,
                 onOptionsClick = { trackWithOptions = it }
             )
-        }
-    }
-}
-
-// ── Playlists Tab ─────────────────────────────────────────────────────────────
-
-@Composable
-private fun PlaylistsTab(
-    playlists: List<Playlist>,
-    selectedPlaylist: Playlist?,
-    playlistTracks: List<Track>,
-    onPlaylistClick: (Playlist) -> Unit,
-    onDeletePlaylist: (Long) -> Unit,
-    onCreatePlaylist: () -> Unit,
-    onTrackClick: (Track) -> Unit,
-    onPlayAll: (List<Track>) -> Unit,
-    onShuffleAll: (List<Track>) -> Unit,
-    onOptionsClick: (Track) -> Unit
-) {
-    if (selectedPlaylist != null) {
-        PlaylistDetailView(
-            tracks = playlistTracks,
-            onTrackClick = onTrackClick,
-            onPlayAll = onPlayAll,
-            onShuffleAll = onShuffleAll,
-            onOptionsClick = onOptionsClick
-        )
-    } else {
-        PlaylistListView(
-            playlists = playlists,
-            onPlaylistClick = onPlaylistClick,
-            onDeletePlaylist = onDeletePlaylist,
-            onCreatePlaylist = onCreatePlaylist
-        )
-    }
-}
-
-@Composable
-private fun PlaylistListView(
-    playlists: List<Playlist>,
-    onPlaylistClick: (Playlist) -> Unit,
-    onDeletePlaylist: (Long) -> Unit,
-    onCreatePlaylist: () -> Unit
-) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        if (playlists.isEmpty()) {
-            EmptyState(
-                icon = Icons.AutoMirrored.Filled.PlaylistPlay,
-                message = "Noch keine Playlists",
-                subtitle = "Tippe + um eine Playlist zu erstellen"
-            )
-        } else {
-            LazyColumn(contentPadding = PaddingValues(bottom = 96.dp)) {
-                items(playlists, key = { it.id }) { playlist ->
-                    PlaylistItem(
-                        playlist = playlist,
-                        onClick = { onPlaylistClick(playlist) },
-                        onDelete = { onDeletePlaylist(playlist.id) }
-                    )
+            3 -> PlaylistsTab(
+                uiState = uiState,
+                viewModel = viewModel,
+                onTrackClick = onTrackClick,
+                onPlayAll = onPlayAll,
+                onShuffleAll = onShuffleAll,
+                onOptionsClick = { trackWithOptions = it },
+                onCreatePlaylist = {
+                    newPlaylistName = ""
+                    showCreatePlaylistDialog = true
                 }
-            }
-        }
-
-        FloatingActionButton(
-            onClick = onCreatePlaylist,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 16.dp),
-            containerColor = VioletPrimary,
-            contentColor = TextPrimary
-        ) {
-            Icon(Icons.Default.Add, contentDescription = "Playlist erstellen")
-        }
-    }
-}
-
-@Composable
-private fun PlaylistItem(
-    playlist: Playlist,
-    onClick: () -> Unit,
-    onDelete: () -> Unit
-) {
-    var showDeleteDialog by remember { mutableStateOf(false) }
-
-    if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            containerColor = SurfaceDark,
-            title = { Text("Playlist löschen", color = TextPrimary) },
-            text = { Text("\"${playlist.name}\" wirklich löschen?", color = TextSecondary) },
-            confirmButton = {
-                TextButton(onClick = { onDelete(); showDeleteDialog = false }) {
-                    Text("Löschen", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Abbrechen", color = TextSecondary)
-                }
-            }
-        )
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(52.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(SurfaceVariantDark),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.PlaylistPlay,
-                contentDescription = null,
-                tint = VioletLight,
-                modifier = Modifier.size(28.dp)
-            )
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = playlist.name,
-                style = MaterialTheme.typography.bodyLarge,
-                color = TextPrimary,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = "${playlist.trackCount} Songs",
-                style = MaterialTheme.typography.bodySmall,
-                color = TextTertiary
-            )
-        }
-        IconButton(onClick = { showDeleteDialog = true }) {
-            Icon(
-                imageVector = Icons.Default.MoreVert,
-                contentDescription = "Optionen",
-                tint = TextTertiary
             )
         }
     }
 }
 
+// ── Downloads Tab ─────────────────────────────────────────────────────────
+
 @Composable
-private fun PlaylistDetailView(
+private fun DownloadsTab(
     tracks: List<Track>,
     onTrackClick: (Track) -> Unit,
     onPlayAll: (List<Track>) -> Unit,
@@ -377,16 +276,16 @@ private fun PlaylistDetailView(
 ) {
     if (tracks.isEmpty()) {
         EmptyState(
-            icon = Icons.Default.MusicNote,
-            message = "Playlist ist leer",
-            subtitle = "Füge Songs über das Optionsmenü hinzu"
+            icon = Icons.Default.Download,
+            message = "Keine Downloads",
+            subtitle = "Lade Songs offline herunter"
         )
     } else {
         LazyColumn(contentPadding = PaddingValues(bottom = 80.dp)) {
             item {
                 PlayAllHeader(
                     count = tracks.size,
-                    label = "Songs",
+                    label = "Songs offline verf\u00fcgbar",
                     onPlayAll = { onPlayAll(tracks) },
                     onShuffleAll = { onShuffleAll(tracks) }
                 )
@@ -403,69 +302,393 @@ private fun PlaylistDetailView(
     }
 }
 
-// ── Playlist Picker Sheet ─────────────────────────────────────────────────────
+// ── Playlists Tab (lokale Playlists + YouTube-Suche) ───────────────────────
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PlaylistPickerSheet(
-    playlists: List<Playlist>,
-    onDismiss: () -> Unit,
-    onSelectPlaylist: (Playlist) -> Unit,
-    onCreateNew: () -> Unit
+private fun PlaylistsTab(
+    uiState: LibraryUiState,
+    viewModel: LibraryViewModel,
+    onTrackClick: (Track) -> Unit,
+    onPlayAll: (List<Track>) -> Unit,
+    onShuffleAll: (List<Track>) -> Unit,
+    onOptionsClick: (Track) -> Unit,
+    onCreatePlaylist: () -> Unit
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = SurfaceDark,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = OutlineDark) }
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 32.dp)
-        ) {
-            Text(
-                text = "Zur Playlist hinzufügen",
-                style = MaterialTheme.typography.titleMedium,
-                color = TextPrimary,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+    // Wenn eine lokale Playlist ausgewaehlt ist, zeige deren Tracks
+    if (uiState.selectedPlaylist != null) {
+        if (uiState.selectedPlaylistTracks.isEmpty()) {
+            EmptyState(
+                icon = Icons.Default.MusicNote,
+                message = "Playlist ist leer",
+                subtitle = "Fuege Songs ueber die Track-Optionen hinzu"
             )
-            HorizontalDivider(color = OutlineDark.copy(alpha = 0.5f), modifier = Modifier.padding(horizontal = 16.dp))
-            Spacer(modifier = Modifier.height(4.dp))
+        } else {
+            LazyColumn(contentPadding = PaddingValues(bottom = 80.dp)) {
+                item {
+                    PlayAllHeader(
+                        count = uiState.selectedPlaylistTracks.size,
+                        label = "Songs",
+                        onPlayAll = { onPlayAll(uiState.selectedPlaylistTracks) },
+                        onShuffleAll = { onShuffleAll(uiState.selectedPlaylistTracks) }
+                    )
+                }
+                items(uiState.selectedPlaylistTracks, key = { it.id }) { track ->
+                    TrackListItem(
+                        track = track,
+                        onClick = { onTrackClick(track) },
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        onOptionsClick = { onOptionsClick(track) }
+                    )
+                }
+            }
+        }
+        return
+    }
 
+    // Wenn eine YouTube-Playlist ausgewaehlt ist, zeige Detailansicht
+    if (uiState.ytSelectedPlaylist != null) {
+        if (uiState.ytIsLoadingTracks) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = VioletPrimary)
+            }
+        } else if (uiState.ytPlaylistTracks.isEmpty()) {
+            EmptyState(
+                icon = Icons.Default.MusicNote,
+                message = "Keine Tracks gefunden",
+                subtitle = "Diese Playlist scheint leer zu sein"
+            )
+        } else {
+            LazyColumn(contentPadding = PaddingValues(bottom = 80.dp)) {
+                item {
+                    PlayAllHeader(
+                        count = uiState.ytPlaylistTracks.size,
+                        label = "Songs",
+                        onPlayAll = { onPlayAll(uiState.ytPlaylistTracks) },
+                        onShuffleAll = { onShuffleAll(uiState.ytPlaylistTracks) }
+                    )
+                }
+                items(uiState.ytPlaylistTracks, key = { it.id }) { track ->
+                    TrackListItem(
+                        track = track,
+                        onClick = { onTrackClick(track) },
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        onOptionsClick = { onOptionsClick(track) }
+                    )
+                }
+            }
+        }
+        return
+    }
+
+    // Uebersicht: lokale Playlists + YouTube-Suche
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 80.dp)
+    ) {
+        // ── Meine Playlists ─────────────────────────────────────────────
+        item {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onDismiss(); onCreateNew() }
-                    .padding(horizontal = 20.dp, vertical = 14.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Add, contentDescription = null, tint = VioletLight, modifier = Modifier.size(22.dp))
-                Spacer(modifier = Modifier.width(16.dp))
-                Text("Neue Playlist erstellen", style = MaterialTheme.typography.bodyMedium, color = VioletLight)
+                Text(
+                    text = "Meine Playlists",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+                TextButton(onClick = onCreatePlaylist) {
+                    Icon(Icons.Default.Add, contentDescription = null, tint = VioletLight, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Neu", color = VioletLight, style = MaterialTheme.typography.labelLarge)
+                }
             }
+        }
+        if (uiState.playlists.isEmpty()) {
+            item {
+                Text(
+                    text = "Noch keine eigenen Playlists — erstelle eine mit „Neu“",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextTertiary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+        } else {
+            items(uiState.playlists, key = { it.id }) { playlist ->
+                LocalPlaylistItem(
+                    playlist = playlist,
+                    onClick = { viewModel.selectPlaylist(playlist) },
+                    onDelete = { viewModel.deletePlaylist(playlist.id) }
+                )
+            }
+        }
 
-            playlists.forEach { playlist ->
-                Row(
+        // ── YouTube Playlists ───────────────────────────────────────────
+        item {
+            Text(
+                text = "YouTube Playlists",
+                style = MaterialTheme.typography.titleMedium,
+                color = TextPrimary,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp)
+            )
+        }
+
+        // Suchleiste
+        item {
+            OutlinedTextField(
+                value = uiState.ytSearchQuery,
+                onValueChange = { viewModel.updateYtSearchQuery(it) },
+                placeholder = { Text("Album oder Playlist suchen...", color = TextTertiary) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextTertiary) },
+                trailingIcon = {
+                    if (uiState.ytSearchQuery.isNotBlank()) {
+                        IconButton(onClick = {
+                            viewModel.searchYouTubePlaylists()
+                        }) {
+                            Icon(Icons.Default.Search, contentDescription = "Suchen", tint = VioletLight)
+                        }
+                    }
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { viewModel.searchYouTubePlaylists() }),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = VioletPrimary,
+                    unfocusedBorderColor = OutlineDark,
+                    focusedTextColor = TextPrimary,
+                    unfocusedTextColor = TextPrimary,
+                    cursorColor = VioletPrimary,
+                    focusedContainerColor = SurfaceDark,
+                    unfocusedContainerColor = SurfaceDark
+                ),
+                shape = RoundedCornerShape(12.dp)
+            )
+        }
+
+        // Fehlermeldung
+        uiState.ytError?.let { error ->
+            item {
+                Snackbar(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    action = {
+                        TextButton(onClick = { viewModel.clearYtError() }) {
+                            Text("OK")
+                        }
+                    }
+                ) {
+                    Text(error, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+
+        // Ladeanzeige / Leer-Status / Ergebnisse
+        if (uiState.ytIsSearching) {
+            item {
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onSelectPlaylist(playlist) }
-                        .padding(horizontal = 20.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(vertical = 32.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.PlaylistPlay, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(22.dp))
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text(playlist.name, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
-                        Text("${playlist.trackCount} Songs", style = MaterialTheme.typography.bodySmall, color = TextTertiary)
-                    }
+                    CircularProgressIndicator(color = VioletPrimary)
                 }
+            }
+        } else if (uiState.ytSearchResults.isEmpty()) {
+            item {
+                if (uiState.ytSearchQuery.isBlank()) {
+                    InlineEmptyState(
+                        icon = Icons.AutoMirrored.Filled.PlaylistPlay,
+                        message = "YouTube Playlists",
+                        subtitle = "Suche nach Alben oder Playlists"
+                    )
+                } else {
+                    InlineEmptyState(
+                        icon = Icons.Default.SearchOff,
+                        message = "Keine Ergebnisse",
+                        subtitle = "Versuche einen anderen Suchbegriff"
+                    )
+                }
+            }
+        } else {
+            items(uiState.ytSearchResults, key = { it.id }) { playlist ->
+                YouTubePlaylistItem(
+                    playlist = playlist,
+                    onClick = { viewModel.selectYouTubePlaylist(playlist) }
+                )
             }
         }
     }
 }
 
-// ── Shared tabs ───────────────────────────────────────────────────────────────
+@Composable
+private fun LocalPlaylistItem(
+    playlist: Playlist,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(SurfaceVariantDark),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.PlaylistPlay,
+                contentDescription = null,
+                tint = VioletLight,
+                modifier = Modifier.size(26.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = playlist.name,
+                style = MaterialTheme.typography.bodyLarge,
+                color = TextPrimary,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = "${playlist.trackCount} Songs",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextTertiary
+            )
+        }
+        IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = "Playlist löschen",
+                tint = TextTertiary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+// Kompakter Empty-State fuer die Verwendung innerhalb einer LazyColumn
+@Composable
+private fun InlineEmptyState(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    message: String,
+    subtitle: String
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = TextTertiary,
+            modifier = Modifier.size(48.dp)
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = message,
+            style = MaterialTheme.typography.titleMedium,
+            color = TextSecondary
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = TextTertiary
+        )
+    }
+}
+
+@Composable
+private fun YouTubePlaylistItem(
+    playlist: YouTubePlaylist,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Thumbnail
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(SurfaceVariantDark),
+            contentAlignment = Alignment.Center
+        ) {
+            if (playlist.thumbnailUrl.isNotBlank()) {
+                AsyncImage(
+                    model = playlist.thumbnailUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.PlaylistPlay,
+                    contentDescription = null,
+                    tint = VioletLight,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = playlist.title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = TextPrimary,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = playlist.channelName,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextTertiary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = "${playlist.trackCount} Songs",
+                style = MaterialTheme.typography.labelSmall,
+                color = TextTertiary
+            )
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.PlaylistPlay,
+            contentDescription = "\u00d6ffnen",
+            tint = VioletLight,
+            modifier = Modifier.size(24.dp)
+        )
+    }
+}
+
+// ── Shared tabs ────────────────────────────────────────────────────────────
 
 @Composable
 private fun LikedSongsTab(
@@ -515,7 +738,7 @@ private fun HistoryTab(
         EmptyState(
             icon = Icons.Default.History,
             message = "Noch keine Wiedergabe",
-            subtitle = "Dein Hörverlauf erscheint hier"
+            subtitle = "Dein Hoerverlauf erscheint hier"
         )
     } else {
         LazyColumn(contentPadding = PaddingValues(bottom = 80.dp)) {
@@ -571,7 +794,7 @@ private fun PlayAllHeader(
             ) {
                 Icon(Icons.Default.Shuffle, null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Zufällig")
+                Text("Zufaellig")
             }
         }
     }
@@ -608,6 +831,68 @@ private fun EmptyState(
                 style = MaterialTheme.typography.bodySmall,
                 color = TextTertiary
             )
+        }
+    }
+}
+
+// ── Playlist Picker Sheet ──────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PlaylistPickerSheet(
+    playlists: List<Playlist>,
+    onDismiss: () -> Unit,
+    onSelectPlaylist: (Playlist) -> Unit,
+    onCreateNew: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = SurfaceDark,
+        dragHandle = { BottomSheetDefaults.DragHandle(color = OutlineDark) }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 32.dp)
+        ) {
+            Text(
+                text = "Zur Playlist hinzufuegen",
+                style = MaterialTheme.typography.titleMedium,
+                color = TextPrimary,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+            )
+            HorizontalDivider(color = OutlineDark.copy(alpha = 0.5f), modifier = Modifier.padding(horizontal = 16.dp))
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onDismiss(); onCreateNew() }
+                    .padding(horizontal = 20.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, tint = VioletLight, modifier = Modifier.size(22.dp))
+                Spacer(modifier = Modifier.width(16.dp))
+                Text("Neue Playlist erstellen", style = MaterialTheme.typography.bodyMedium, color = VioletLight)
+            }
+
+            playlists.forEach { playlist ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelectPlaylist(playlist) }
+                        .padding(horizontal = 20.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.PlaylistPlay, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(22.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text(playlist.name, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
+                        Text("${playlist.trackCount} Songs", style = MaterialTheme.typography.bodySmall, color = TextTertiary)
+                    }
+                }
+            }
         }
     }
 }

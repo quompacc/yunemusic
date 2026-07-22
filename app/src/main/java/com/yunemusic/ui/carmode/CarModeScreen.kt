@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.yunemusic.ui.player.PlayerViewModel
 import com.yunemusic.ui.theme.*
@@ -31,7 +32,7 @@ fun CarModeScreen(
     onExitCarMode: () -> Unit,
     viewModel: PlayerViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var dragOffset by remember { mutableFloatStateOf(0f) }
 
     Box(
@@ -152,6 +153,22 @@ fun CarModeScreen(
                     color = TextSecondary,
                     textAlign = TextAlign.Center,
                     fontSize = 18.sp
+                )
+            }
+
+            // Fehler-Feedback — groß und gut lesbar für den Fahrbetrieb
+            uiState.error?.let { error ->
+                Text(
+                    text = error,
+                    color = ErrorRed,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(ErrorRed.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                        .padding(16.dp)
                 )
             }
 
