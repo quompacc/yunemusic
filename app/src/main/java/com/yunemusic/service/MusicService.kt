@@ -23,12 +23,16 @@ import androidx.media.MediaBrowserServiceCompat
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.AudioAttributes
+import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import com.yunemusic.MainActivity
 import com.yunemusic.R
 import com.yunemusic.domain.model.Track
 import com.yunemusic.data.preferences.UserPreferences
 import com.yunemusic.domain.repository.MusicRepository
+import com.yunemusic.domain.usecase.PlayTrackUseCase
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,13 +43,6 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class MusicService : MediaBrowserServiceCompat() {
-
-    interface Callback {
-        fun onTrackCompleted()
-        fun onSkipNextRequested()
-        fun onSkipPreviousRequested()
-        fun onPlayTrackRequested(track: Track)
-    }
 
     companion object {
         private const val TAG = "MusicService"
@@ -67,13 +64,22 @@ class MusicService : MediaBrowserServiceCompat() {
 
     @Inject lateinit var repository: MusicRepository
     @Inject lateinit var userPreferences: UserPreferences
+    @Inject lateinit var playTrackUseCase: PlayTrackUseCase
+    @Inject lateinit var tasteAnalyzer: TasteAnalyzer
+    @Inject lateinit var duckingController: DuckingController
 
     private lateinit var mediaSession: MediaSessionCompat
     private lateinit var exoPlayer: ExoPlayer
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var dynamicsProcessing: DynamicsProcessing? = null
 
-    var callback: Callback? = null
+    /** Queue/Radio/Auto-Advance leben im Service, damit die Wiedergabe auch ohne UI weiterläuft */
+    lateinit var queueManager: QueueManager
+        private set
+
+    // Lautstärke = Limiter-Fallback (API < 28) × Notification-Ducking
+    private var limiterFallbackVolume = 1f
+    private var duckFactor = 1f
 
     // Cache Track objects so onPlayFromMediaId can look them up by ID
     private val browseCache = mutableMapOf<String, Track>()
@@ -87,8 +93,7 @@ class MusicService : MediaBrowserServiceCompat() {
     private val _progress = MutableStateFlow(0f)
     val progress: StateFlow<Float> = _progress.asStateFlow()
 
-    private val _queue = MutableStateFlow<List<Track>>(emptyList())
-    val queue: StateFlow<List<Track>> = _queue.asStateFlow()
+    val queue: StateFlow<List<Track>> get() = queueManager.queue
 
     private val binder = MusicBinder()
 
@@ -98,16 +103,30 @@ class MusicService : MediaBrowserServiceCompat() {
 
     override fun onCreate() {
         super.onCreate()
+        queueManager = QueueManager(
+            scope = serviceScope,
+            repository = repository,
+            playTrackUseCase = playTrackUseCase,
+            tasteAnalyzer = tasteAnalyzer,
+            player = object : QueueManager.PlayerBridge {
+                override fun playTrack(track: Track, streamUrl: String) =
+                    this@MusicService.playTrack(track, streamUrl)
+                override fun seekToStart() = seekTo(0)
+                override fun resume() = play()
+                override fun getPositionMs(): Long = exoPlayer.currentPosition
+            }
+        )
         createNotificationChannel()
         initMediaSession()
         initExoPlayer()
         startProgressTracking()
         observeLimiterSetting()
+        observeDucking()
     }
 
     override fun onBind(intent: Intent): IBinder {
         return if (intent.action == SERVICE_INTERFACE) {
-            super.onBind(intent)!!
+            super.onBind(intent) ?: binder
         } else {
             binder
         }
@@ -130,12 +149,37 @@ class MusicService : MediaBrowserServiceCompat() {
     }
 
     private fun initExoPlayer() {
-        exoPlayer = ExoPlayer.Builder(this).build().apply {
+        val audioAttributes = AudioAttributes.Builder()
+            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+            .setUsage(C.USAGE_MEDIA)
+            .build()
+
+        val loadControl = DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                10000,  // minBufferMs — schneller Start
+                30000,  // maxBufferMs — weniger RAM als Default (50s)
+                1500,   // bufferForPlaybackMs
+                3000    // bufferForPlaybackAfterRebufferMs
+            )
+            .build()
+
+        val renderersFactory = DefaultRenderersFactory(this)
+            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+
+        exoPlayer = ExoPlayer.Builder(this)
+            .setRenderersFactory(renderersFactory)
+            .setLoadControl(loadControl)
+            .build()
+
+        exoPlayer.setAudioAttributes(audioAttributes, true)
+        exoPlayer.setHandleAudioBecomingNoisy(true)
+
+        exoPlayer.apply {
             addListener(object : Player.Listener {
                 override fun onPlaybackStateChanged(state: Int) {
                     updatePlaybackState()
                     if (state == Player.STATE_ENDED) {
-                        callback?.onTrackCompleted()
+                        queueManager.onTrackEnded()
                     }
                 }
 
@@ -143,6 +187,12 @@ class MusicService : MediaBrowserServiceCompat() {
                     _isPlaying.value = playing
                     updatePlaybackState()
                     updateNotification()
+                    // Bei Pause: Notification bleibt sichtbar, wird aber wegwischbar
+                    if (!playing && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        stopForeground(STOP_FOREGROUND_DETACH)
+                    } else if (playing && _currentTrack.value != null) {
+                        startForegroundWithNotification()
+                    }
                 }
 
                 override fun onAudioSessionIdChanged(audioSessionId: Int) {
@@ -171,6 +221,21 @@ class MusicService : MediaBrowserServiceCompat() {
         }
     }
 
+    // ── Notification-Ducking (leiser bei eingehenden Benachrichtigungen) ──────
+
+    private fun observeDucking() {
+        serviceScope.launch {
+            duckingController.duckFactor.collect { factor ->
+                duckFactor = factor
+                applyVolume()
+            }
+        }
+    }
+
+    private fun applyVolume() {
+        exoPlayer.volume = limiterFallbackVolume * duckFactor
+    }
+
     // ── Loudness limiter ──────────────────────────────────────────────────────
 
     private fun observeLimiterSetting() {
@@ -190,7 +255,8 @@ class MusicService : MediaBrowserServiceCompat() {
             }
         } else {
             // API < 28 fallback: reduce internal volume to provide ~3 dB headroom
-            exoPlayer.volume = if (enabled) 0.85f else 1.0f
+            limiterFallbackVolume = if (enabled) 0.85f else 1.0f
+            applyVolume()
         }
     }
 
@@ -226,11 +292,16 @@ class MusicService : MediaBrowserServiceCompat() {
 
     fun playTrack(track: Track, streamUrl: String) {
         _currentTrack.value = track
+        _progress.value = 0f
         val mediaItem = MediaItem.fromUri(streamUrl)
         exoPlayer.setMediaItem(mediaItem)
         exoPlayer.prepare()
         exoPlayer.play()
         updateMediaSessionMetadata(track)
+        startForegroundWithNotification()
+    }
+
+    private fun startForegroundWithNotification() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(NOTIFICATION_ID, buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
         } else {
@@ -239,10 +310,6 @@ class MusicService : MediaBrowserServiceCompat() {
     }
 
     fun play() { exoPlayer.play() }
-
-    fun setQueue(tracks: List<Track>, @Suppress("UNUSED_PARAMETER") startIndex: Int = 0) {
-        _queue.value = tracks
-    }
 
     fun togglePlayPause() {
         if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
@@ -359,8 +426,8 @@ class MusicService : MediaBrowserServiceCompat() {
         when (intent?.action) {
             ACTION_PLAY  -> exoPlayer.play()
             ACTION_PAUSE -> exoPlayer.pause()
-            ACTION_NEXT  -> callback?.onSkipNextRequested()
-            ACTION_PREV  -> callback?.onSkipPreviousRequested()
+            ACTION_NEXT  -> queueManager.skipNext()
+            ACTION_PREV  -> queueManager.skipPrevious()
             ACTION_STOP  -> {
                 exoPlayer.stop()
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -394,8 +461,8 @@ class MusicService : MediaBrowserServiceCompat() {
                         // Root: show category tiles in Auto
                         items += browsableItem(BROWSE_RECENT, "Zuletzt gehört", "Zuletzt gespielte Tracks")
                         items += browsableItem(BROWSE_LIKED,  "Geliked",        "Deine Lieblingstracks")
-                        if (_queue.value.isNotEmpty()) {
-                            items += browsableItem(BROWSE_QUEUE, "Warteschlange", "${_queue.value.size} Tracks")
+                        if (queueManager.queue.value.isNotEmpty()) {
+                            items += browsableItem(BROWSE_QUEUE, "Warteschlange", "${queueManager.queue.value.size} Tracks")
                         }
                     }
                     BROWSE_RECENT -> {
@@ -411,7 +478,7 @@ class MusicService : MediaBrowserServiceCompat() {
                         }
                     }
                     BROWSE_QUEUE -> {
-                        _queue.value.forEach { track ->
+                        queueManager.queue.value.forEach { track ->
                             browseCache[track.id] = track
                             items += track.toPlayableItem()
                         }
@@ -447,7 +514,7 @@ class MusicService : MediaBrowserServiceCompat() {
 
     override fun onDestroy() {
         super.onDestroy()
-        callback = null
+        queueManager.onDestroy()
         browseCache.clear()
         serviceScope.cancel()
         dynamicsProcessing?.release()
@@ -461,21 +528,25 @@ class MusicService : MediaBrowserServiceCompat() {
     private inner class MediaSessionCallback : MediaSessionCompat.Callback() {
         override fun onPlay()           { exoPlayer.play() }
         override fun onPause()          { exoPlayer.pause() }
-        override fun onSkipToNext()     { callback?.onSkipNextRequested() }
-        override fun onSkipToPrevious() { callback?.onSkipPreviousRequested() }
+        override fun onSkipToNext()     { queueManager.skipNext() }
+        override fun onSkipToPrevious() { queueManager.skipPrevious() }
         override fun onSeekTo(pos: Long){ seekTo(pos) }
 
         override fun onPlayFromMediaId(mediaId: String?, extras: Bundle?) {
             val track = mediaId?.let { browseCache[it] } ?: return
-            callback?.onPlayTrackRequested(track)
+            queueManager.playTrack(track)
         }
 
         override fun onPlayFromSearch(query: String?, extras: Bundle?) {
-            // Voice search from Auto: "Hey Google, spiel [Song] auf YuneMusic"
-            // Falls kein Track gefunden → leere Queue → Radio lädt Tracks
-            if (!query.isNullOrBlank()) {
-                Log.d(TAG, "Voice search: $query")
-                // The ViewModel will handle the search-to-play flow via a future extension
+            // Voice search aus Android Auto: "Hey Google, spiel [Song] auf YuneMusic"
+            if (query.isNullOrBlank()) return
+            Log.d(TAG, "Voice search: $query")
+            serviceScope.launch {
+                val results = repository.searchTracks(query, null).getOrElse { emptyList() }
+                    .filter { it.id.isNotBlank() }
+                if (results.isNotEmpty()) {
+                    queueManager.playQueue(results.take(20), 0)
+                }
             }
         }
 
