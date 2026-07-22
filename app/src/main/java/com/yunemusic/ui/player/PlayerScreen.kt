@@ -222,10 +222,27 @@ fun PlayerScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Progress Slider — seekt erst beim Loslassen, nicht bei jedem Drag-Pixel
+            // Progress Slider — seekt erst beim Loslassen; beim Ziehen zeigt eine
+            // große Zeitvorschau die exakte Zielposition
             var dragProgress by remember { mutableStateOf<Float?>(null) }
+            val durationSec = uiState.currentTrack?.durationSeconds ?: 0
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                dragProgress?.let { drag ->
+                    Text(
+                        text = formatDuration((drag * durationSec).toInt()),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = VioletPrimary
+                    )
+                }
+            }
+
             Column(modifier = Modifier.fillMaxWidth()) {
                 Slider(
                     value = dragProgress ?: uiState.progress,
@@ -243,17 +260,43 @@ fun PlayerScreen(
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val duration = uiState.currentTrack?.durationSeconds ?: 0
-                    val current = ((dragProgress ?: uiState.progress) * duration).toInt()
+                    val current = ((dragProgress ?: uiState.progress) * durationSec).toInt()
                     Text(
                         text = formatDuration(current),
                         style = MaterialTheme.typography.labelSmall,
                         color = TextTertiary
                     )
+                    // Feinjustierung: ±10 Sekunden spulen
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = { viewModel.seekBy(-10) },
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Replay10,
+                                contentDescription = "10 Sekunden zurück",
+                                tint = TextSecondary,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(24.dp))
+                        IconButton(
+                            onClick = { viewModel.seekBy(10) },
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Forward10,
+                                contentDescription = "10 Sekunden vor",
+                                tint = TextSecondary,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                    }
                     Text(
-                        text = formatDuration(duration),
+                        text = formatDuration(durationSec),
                         style = MaterialTheme.typography.labelSmall,
                         color = TextTertiary
                     )

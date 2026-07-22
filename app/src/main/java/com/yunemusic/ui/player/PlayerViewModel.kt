@@ -163,6 +163,15 @@ class PlayerViewModel @Inject constructor(
         if (durationMs > 0) service.seekTo((progress * durationMs).toLong())
     }
 
+    /** Relativ spulen, z. B. seekBy(-10) = 10 Sekunden zurück */
+    fun seekBy(deltaSeconds: Int) {
+        val service = musicService ?: return
+        val durationMs = service.getDurationMs()
+        if (durationMs <= 0) return
+        val newPos = (service.getPositionMs() + deltaSeconds * 1000L).coerceIn(0L, durationMs)
+        service.seekTo(newPos)
+    }
+
     fun toggleLike() {
         val track = _uiState.value.currentTrack ?: return
         // Synchron togglen, damit Doppeltipp nicht doppelt liked (Race)

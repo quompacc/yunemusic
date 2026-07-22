@@ -315,7 +315,15 @@ class MusicService : MediaBrowserServiceCompat() {
         if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
     }
 
-    fun seekTo(positionMs: Long) { exoPlayer.seekTo(positionMs) }
+    fun seekTo(positionMs: Long) {
+        exoPlayer.seekTo(positionMs)
+        // Anzeige sofort aktualisieren — der 500-ms-Tick läuft nur bei aktiver Wiedergabe
+        val duration = exoPlayer.duration
+        if (duration > 0) {
+            _progress.value = positionMs.coerceIn(0, duration).toFloat() / duration
+        }
+        updatePlaybackState()
+    }
 
     fun getDurationMs(): Long = exoPlayer.duration
     fun getPositionMs(): Long = exoPlayer.currentPosition
