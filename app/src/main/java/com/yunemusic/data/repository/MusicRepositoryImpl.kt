@@ -116,6 +116,9 @@ class MusicRepositoryImpl @Inject constructor(
     override fun getLikedTracks(): Flow<List<Track>> =
         trackDao.getLikedTracks().map { it.map { e -> e.toDomain() } }
 
+    override fun getSavedTracks(): Flow<List<Track>> =
+        trackDao.getAllTracks().map { it.map { e -> e.toDomain() } }
+
     override suspend fun likeTrack(track: Track) {
         // Atomar statt Check-then-Act: IGNORE-Insert + Update erhält vorhandene
         // Metadaten (addedAt etc.), REPLACE würde sie überschreiben

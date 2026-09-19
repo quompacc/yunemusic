@@ -23,6 +23,8 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): YuneMusicDatabase =
+        // Update invariant: keep this name and explicit migrations. Never add
+        // fallbackToDestructiveMigration: missing migrations must fail, not erase user data.
         Room.databaseBuilder(context, YuneMusicDatabase::class.java, "yune_music.db")
             .addMigrations(
                 YuneMusicDatabase.MIGRATION_1_2,

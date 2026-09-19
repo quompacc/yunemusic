@@ -2,6 +2,8 @@ package com.yunemusic.ui.player
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,7 +43,7 @@ fun PlayerScreen(
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        VioletDark.copy(alpha = 0.3f),
+                        SignalDark.copy(alpha = 0.3f),
                         DarkBackground
                     )
                 )
@@ -63,6 +65,7 @@ fun PlayerScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -101,12 +104,14 @@ fun PlayerScreen(
             // Album Art
             Box(
                 modifier = Modifier
-                    .size(300.dp)
+                    .widthIn(max = 300.dp)
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
                     .shadow(
                         elevation = 24.dp,
                         shape = RoundedCornerShape(16.dp),
-                        ambientColor = VioletPrimary.copy(alpha = 0.4f),
-                        spotColor = VioletPrimary.copy(alpha = 0.6f)
+                        ambientColor = SignalOrange.copy(alpha = 0.4f),
+                        spotColor = SignalOrange.copy(alpha = 0.6f)
                     )
                     .clip(RoundedCornerShape(16.dp))
                     .background(SurfaceVariantDark)
@@ -122,7 +127,7 @@ fun PlayerScreen(
                     Icon(
                         imageVector = Icons.Default.MusicNote,
                         contentDescription = null,
-                        tint = VioletPrimary,
+                        tint = SignalOrange,
                         modifier = Modifier
                             .size(80.dp)
                             .align(Alignment.Center)
@@ -186,7 +191,7 @@ fun PlayerScreen(
                                 CircularProgressIndicator(
                                     progress = { uiState.downloadProgress },
                                     modifier = Modifier.size(26.dp),
-                                    color = VioletPrimary,
+                                    color = SignalOrange,
                                     strokeWidth = 3.dp,
                                     trackColor = OutlineDark
                                 )
@@ -201,7 +206,7 @@ fun PlayerScreen(
                             Icon(
                                 imageVector = if (uiState.isDownloaded) Icons.Default.DownloadDone else Icons.Default.Download,
                                 contentDescription = if (uiState.isDownloaded) "Download entfernen" else "Download",
-                                tint = if (uiState.isDownloaded) VioletPrimary else TextSecondary,
+                                tint = if (uiState.isDownloaded) SignalOrange else TextSecondary,
                                 modifier = Modifier.size(26.dp)
                             )
                         }
@@ -214,7 +219,7 @@ fun PlayerScreen(
                 Text(
                     text = uiState.downloadStatus,
                     style = MaterialTheme.typography.labelSmall,
-                    color = VioletPrimary,
+                    color = SignalOrange,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 4.dp),
@@ -238,7 +243,7 @@ fun PlayerScreen(
                         text = formatDuration((drag * durationSec).toInt()),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = VioletPrimary
+                        color = SignalOrange
                     )
                 }
             }
@@ -253,8 +258,8 @@ fun PlayerScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = SliderDefaults.colors(
-                        thumbColor = VioletPrimary,
-                        activeTrackColor = VioletPrimary,
+                        thumbColor = SignalOrange,
+                        activeTrackColor = SignalOrange,
                         inactiveTrackColor = OutlineDark
                     )
                 )
@@ -319,7 +324,7 @@ fun PlayerScreen(
                     Icon(
                         imageVector = Icons.Default.Shuffle,
                         contentDescription = "Shuffle",
-                        tint = if (uiState.isShuffleEnabled) VioletPrimary else TextTertiary,
+                        tint = if (uiState.isShuffleEnabled) SignalOrange else TextTertiary,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -340,7 +345,7 @@ fun PlayerScreen(
                 FilledIconButton(
                     onClick = { viewModel.togglePlayPause() },
                     modifier = Modifier.size(72.dp),
-                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = VioletPrimary),
+                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = SignalOrange),
                     shape = CircleShape
                 ) {
                     if (uiState.isLoading || uiState.isLoadingRadio || uiState.isBuffering) {
@@ -378,7 +383,7 @@ fun PlayerScreen(
                             else -> Icons.Default.Repeat
                         },
                         contentDescription = "Repeat",
-                        tint = if (uiState.repeatMode != RepeatMode.OFF) VioletPrimary else TextTertiary,
+                        tint = if (uiState.repeatMode != RepeatMode.OFF) SignalOrange else TextTertiary,
                         modifier = Modifier.size(24.dp)
                     )
                 }

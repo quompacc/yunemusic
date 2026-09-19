@@ -41,7 +41,7 @@ fun CarModeScreen(
             .background(
                 Brush.radialGradient(
                     colors = listOf(
-                        VioletDark.copy(alpha = 0.2f),
+                        SignalDark.copy(alpha = 0.2f),
                         Color(0xFF050508)
                     ),
                     radius = 1200f
@@ -91,14 +91,14 @@ fun CarModeScreen(
                     Icon(
                         imageVector = Icons.Default.DirectionsCar,
                         contentDescription = null,
-                        tint = VioletLight,
+                        tint = SignalLight,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "Car Mode",
                         style = MaterialTheme.typography.labelLarge,
-                        color = VioletLight
+                        color = SignalLight
                     )
                 }
                 Spacer(modifier = Modifier.size(48.dp))
@@ -123,7 +123,7 @@ fun CarModeScreen(
                     Icon(
                         imageVector = Icons.Default.MusicNote,
                         contentDescription = null,
-                        tint = VioletPrimary,
+                        tint = SignalOrange,
                         modifier = Modifier
                             .size(80.dp)
                             .align(Alignment.Center)
@@ -180,7 +180,7 @@ fun CarModeScreen(
                         .fillMaxWidth()
                         .height(4.dp)
                         .clip(RoundedCornerShape(2.dp)),
-                    color = VioletPrimary,
+                    color = SignalOrange,
                     trackColor = OutlineDark
                 )
             }
@@ -215,7 +215,7 @@ fun CarModeScreen(
                     onClick = { viewModel.togglePlayPause() },
                     modifier = Modifier.size(96.dp),
                     colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = VioletPrimary
+                        containerColor = SignalOrange
                     ),
                     shape = CircleShape
                 ) {

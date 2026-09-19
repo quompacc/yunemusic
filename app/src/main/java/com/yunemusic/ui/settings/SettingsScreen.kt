@@ -109,7 +109,7 @@ fun SettingsScreen(
                                     selected = uiState.audioQuality == index,
                                     onClick = { viewModel.updateAudioQuality(index) },
                                     colors = RadioButtonDefaults.colors(
-                                        selectedColor = VioletPrimary,
+                                        selectedColor = SignalOrange,
                                         unselectedColor = TextTertiary
                                     )
                                 )
@@ -156,7 +156,7 @@ fun SettingsScreen(
                             onCheckedChange = { viewModel.updateLoudnessLimiter(it) },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = OnPrimary,
-                                checkedTrackColor = VioletPrimary,
+                                checkedTrackColor = SignalOrange,
                                 uncheckedThumbColor = TextSecondary,
                                 uncheckedTrackColor = OutlineDark
                             )
@@ -209,7 +209,7 @@ fun SettingsScreen(
                             },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = OnPrimary,
-                                checkedTrackColor = VioletPrimary,
+                                checkedTrackColor = SignalOrange,
                                 uncheckedThumbColor = TextSecondary,
                                 uncheckedTrackColor = OutlineDark
                             )
@@ -254,7 +254,7 @@ fun SettingsScreen(
                             onCheckedChange = { viewModel.updateWifiOnly(it) },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = OnPrimary,
-                                checkedTrackColor = VioletPrimary,
+                                checkedTrackColor = SignalOrange,
                                 uncheckedThumbColor = TextSecondary,
                                 uncheckedTrackColor = OutlineDark
                             )
@@ -293,7 +293,7 @@ fun SettingsScreen(
                                     selected = uiState.carModeTrigger == triggerValues[index],
                                     onClick = { viewModel.updateCarModeTrigger(triggerValues[index]) },
                                     colors = RadioButtonDefaults.colors(
-                                        selectedColor = VioletPrimary,
+                                        selectedColor = SignalOrange,
                                         unselectedColor = TextTertiary
                                     )
                                 )
@@ -307,18 +307,18 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(
                             onClick = onCarModeNavigate,
-                            colors = ButtonDefaults.buttonColors(containerColor = VioletContainer),
+                            colors = ButtonDefaults.buttonColors(containerColor = SignalContainer),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Icon(
                                 imageVector = Icons.Default.DirectionsCar,
                                 contentDescription = null,
-                                tint = OnVioletContainer,
+                                tint = OnSignalContainer,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Car Mode offnen", color = OnVioletContainer)
+                            Text("Car Mode offnen", color = OnSignalContainer)
                         }
                     }
                 }
@@ -400,7 +400,7 @@ private fun SettingsSectionHeader(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.labelLarge,
-        color = VioletLight,
+        color = SignalLight,
         fontWeight = FontWeight.SemiBold,
         modifier = Modifier.padding(start = 16.dp, top = 20.dp, bottom = 4.dp)
     )

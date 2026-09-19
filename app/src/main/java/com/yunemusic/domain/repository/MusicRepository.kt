@@ -18,6 +18,7 @@ interface MusicRepository {
     suspend fun getTasteProfile(): TasteProfile
     suspend fun updateTasteProfile(profile: TasteProfile)
     fun getLikedTracks(): Flow<List<Track>>
+    fun getSavedTracks(): Flow<List<Track>>
     suspend fun likeTrack(track: Track)
     suspend fun unlikeTrack(trackId: String)
     suspend fun isTrackLiked(trackId: String): Boolean

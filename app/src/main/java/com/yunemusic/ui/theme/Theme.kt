@@ -11,17 +11,17 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val YuneDarkColorScheme = darkColorScheme(
-    primary = VioletPrimary,
+    primary = SignalOrange,
     onPrimary = OnPrimary,
-    primaryContainer = VioletContainer,
-    onPrimaryContainer = OnVioletContainer,
-    secondary = IndigoPrimary,
+    primaryContainer = SignalContainer,
+    onPrimaryContainer = OnSignalContainer,
+    secondary = SagePrimary,
     onSecondary = OnSecondary,
-    secondaryContainer = Color(0xFF1E1B4B),
-    onSecondaryContainer = IndigoLight,
+    secondaryContainer = Color(0xFF303B26),
+    onSecondaryContainer = SageLight,
     tertiary = CyanAccent,
     onTertiary = Black,
-    tertiaryContainer = Color(0xFF083344),
+    tertiaryContainer = Color(0xFF3E3826),
     onTertiaryContainer = CyanAccent,
     background = DarkBackground,
     onBackground = OnBackground,
@@ -37,8 +37,8 @@ private val YuneDarkColorScheme = darkColorScheme(
     onErrorContainer = Color(0xFFFECACA),
     inverseSurface = TextPrimary,
     inverseOnSurface = DarkBackground,
-    inversePrimary = VioletDark,
-    surfaceTint = VioletPrimary,
+    inversePrimary = SignalDark,
+    surfaceTint = SignalOrange,
     scrim = Black
 )
 

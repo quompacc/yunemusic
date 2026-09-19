@@ -114,10 +114,10 @@ Tracks können direkt aus Auto heraus abgespielt werden. Sprachbefehle ("Hey Goo
 
 ## Datenschutz
 
-- Keine Nutzerdaten verlassen das Gerät
+- Suche, Streaming und Cover-Abrufe übertragen Anfragen und die IP-Adresse an YouTube beziehungsweise dessen Auslieferungsdienste. Ohne Google-Login bedeutet nicht anonym gegenüber diesen Diensten.
 - Kein Google-Konto, kein API-Key erforderlich
 - Taste Profile, Likes und Verlauf werden ausschließlich lokal in Room gespeichert
-- Streams werden nicht gecacht, nur live gestreamt
+- Downloads werden auf Wunsch im privaten App-Speicher abgelegt; Profildaten und Downloads sind von Android-Backups und Gerätetransfers ausgeschlossen.
 
 ## Lizenz
 

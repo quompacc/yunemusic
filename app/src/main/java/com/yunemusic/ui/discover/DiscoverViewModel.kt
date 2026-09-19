@@ -6,6 +6,8 @@ import com.yunemusic.domain.model.Track
 import com.yunemusic.domain.repository.MusicRepository
 import com.yunemusic.domain.usecase.GetRecommendationsUseCase
 import com.yunemusic.domain.usecase.SearchTracksUseCase
+import com.yunemusic.domain.usecase.BuildPersonalSessionUseCase
+import kotlinx.coroutines.CancellationException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -26,6 +28,8 @@ data class SmartMix(
 )
 
 data class DiscoverUiState(
+    val isBuildingSession: Boolean = false,
+    val sessionError: String? = null,
     val recommendations: List<Track> = emptyList(),
     val trendingTracks: List<Track> = emptyList(),
     val featuredTracks: List<Track> = emptyList(),
@@ -45,6 +49,7 @@ data class DiscoverUiState(
 @HiltViewModel
 class DiscoverViewModel @Inject constructor(
     private val searchTracksUseCase: SearchTracksUseCase,
+    private val buildPersonalSession: BuildPersonalSessionUseCase,
     private val getRecommendationsUseCase: GetRecommendationsUseCase,
     private val repository: MusicRepository
 ) : ViewModel() {
@@ -53,6 +58,27 @@ class DiscoverViewModel @Inject constructor(
     val uiState: StateFlow<DiscoverUiState> = _uiState.asStateFlow()
 
     private var searchJob: Job? = null
+
+    fun startSession(onReady: (List<Track>) -> Unit) {
+        if (_uiState.value.isBuildingSession) return
+        _uiState.update { it.copy(isBuildingSession = true, sessionError = null) }
+        viewModelScope.launch {
+            try {
+                val tracks = buildPersonalSession()
+                if (tracks.isEmpty()) {
+                    _uiState.update { it.copy(sessionError = "Like oder höre erst einige Songs. Daraus entsteht deine persönliche Session.") }
+                } else {
+                    onReady(tracks)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.update { it.copy(sessionError = "Deine Session konnte nicht erstellt werden. Bitte erneut versuchen.") }
+            } finally {
+                _uiState.update { it.copy(isBuildingSession = false) }
+            }
+        }
+    }
 
     init {
         loadContent()
@@ -148,16 +174,16 @@ class DiscoverViewModel @Inject constructor(
     }
 
     fun search(query: String) {
+        searchJob?.cancel()
         _uiState.update { it.copy(searchQuery = query) }
 
         if (query.isBlank()) {
-            _uiState.update { it.copy(searchResults = emptyList(), isSearchActive = false) }
+            clearSearch()
             return
         }
 
         _uiState.update { it.copy(isSearchActive = true) }
 
-        searchJob?.cancel()
         searchJob = viewModelScope.launch {
             delay(400)
             _uiState.update { it.copy(isLoadingSearch = true, error = null) }
@@ -187,6 +213,8 @@ class DiscoverViewModel @Inject constructor(
             it.copy(
                 searchQuery = "",
                 searchResults = emptyList(),
+                isLoadingSearch = false,
+                error = null,
                 isSearchActive = false,
                 selectedCategory = null
             )

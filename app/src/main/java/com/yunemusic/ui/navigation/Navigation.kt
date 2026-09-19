@@ -144,11 +144,11 @@ fun YuneMusicNavHost() {
                                     }
                                 },
                                 colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = VioletPrimary,
-                                    selectedTextColor = VioletPrimary,
+                                    selectedIconColor = SignalOrange,
+                                    selectedTextColor = SignalOrange,
                                     unselectedIconColor = TextTertiary,
                                     unselectedTextColor = TextTertiary,
-                                    indicatorColor = VioletContainer
+                                    indicatorColor = SignalContainer
                                 )
                             )
                         }

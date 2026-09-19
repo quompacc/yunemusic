@@ -117,11 +117,11 @@ fun LibraryScreen(
                     onValueChange = { newPlaylistName = it },
                     placeholder = { Text("Name der Playlist", color = TextTertiary) },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = VioletPrimary,
+                        focusedBorderColor = SignalOrange,
                         unfocusedBorderColor = OutlineDark,
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
-                        cursorColor = VioletPrimary
+                        cursorColor = SignalOrange
                     ),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -136,7 +136,7 @@ fun LibraryScreen(
                     },
                     enabled = newPlaylistName.isNotBlank()
                 ) {
-                    Text("Erstellen", color = VioletLight)
+                    Text("Erstellen", color = SignalLight)
                 }
             },
             dismissButton = {
@@ -197,11 +197,11 @@ fun LibraryScreen(
         TabRow(
             selectedTabIndex = selectedTab,
             containerColor = DarkBackground,
-            contentColor = VioletPrimary,
+            contentColor = SignalOrange,
             indicator = { tabPositions ->
                 TabRowDefaults.SecondaryIndicator(
                     modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                    color = VioletPrimary
+                    color = SignalOrange
                 )
             }
         ) {
@@ -218,7 +218,7 @@ fun LibraryScreen(
                     text = {
                         Text(
                             text = title,
-                            color = if (selectedTab == index) VioletLight else TextSecondary,
+                            color = if (selectedTab == index) SignalLight else TextSecondary,
                             style = MaterialTheme.typography.labelLarge
                         )
                     }
@@ -352,7 +352,7 @@ private fun PlaylistsTab(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = VioletPrimary)
+                CircularProgressIndicator(color = SignalOrange)
             }
         } else if (uiState.ytPlaylistTracks.isEmpty()) {
             EmptyState(
@@ -404,9 +404,9 @@ private fun PlaylistsTab(
                     fontWeight = FontWeight.Bold
                 )
                 TextButton(onClick = onCreatePlaylist) {
-                    Icon(Icons.Default.Add, contentDescription = null, tint = VioletLight, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Add, contentDescription = null, tint = SignalLight, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Neu", color = VioletLight, style = MaterialTheme.typography.labelLarge)
+                    Text("Neu", color = SignalLight, style = MaterialTheme.typography.labelLarge)
                 }
             }
         }
@@ -452,7 +452,7 @@ private fun PlaylistsTab(
                         IconButton(onClick = {
                             viewModel.searchYouTubePlaylists()
                         }) {
-                            Icon(Icons.Default.Search, contentDescription = "Suchen", tint = VioletLight)
+                            Icon(Icons.Default.Search, contentDescription = "Suchen", tint = SignalLight)
                         }
                     }
                 },
@@ -463,11 +463,11 @@ private fun PlaylistsTab(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = VioletPrimary,
+                    focusedBorderColor = SignalOrange,
                     unfocusedBorderColor = OutlineDark,
                     focusedTextColor = TextPrimary,
                     unfocusedTextColor = TextPrimary,
-                    cursorColor = VioletPrimary,
+                    cursorColor = SignalOrange,
                     focusedContainerColor = SurfaceDark,
                     unfocusedContainerColor = SurfaceDark
                 ),
@@ -502,7 +502,7 @@ private fun PlaylistsTab(
                         .padding(vertical = 32.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = VioletPrimary)
+                    CircularProgressIndicator(color = SignalOrange)
                 }
             }
         } else if (uiState.ytSearchResults.isEmpty()) {
@@ -555,7 +555,7 @@ private fun LocalPlaylistItem(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.PlaylistPlay,
                 contentDescription = null,
-                tint = VioletLight,
+                tint = SignalLight,
                 modifier = Modifier.size(26.dp)
             )
         }
@@ -651,7 +651,7 @@ private fun YouTubePlaylistItem(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.PlaylistPlay,
                     contentDescription = null,
-                    tint = VioletLight,
+                    tint = SignalLight,
                     modifier = Modifier.size(28.dp)
                 )
             }
@@ -682,7 +682,7 @@ private fun YouTubePlaylistItem(
         Icon(
             imageVector = Icons.AutoMirrored.Filled.PlaylistPlay,
             contentDescription = "\u00d6ffnen",
-            tint = VioletLight,
+            tint = SignalLight,
             modifier = Modifier.size(24.dp)
         )
     }
@@ -780,7 +780,7 @@ private fun PlayAllHeader(
             Button(
                 onClick = onPlayAll,
                 modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = VioletPrimary)
+                colors = ButtonDefaults.buttonColors(containerColor = SignalOrange)
             ) {
                 Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
@@ -789,8 +789,8 @@ private fun PlayAllHeader(
             OutlinedButton(
                 onClick = onShuffleAll,
                 modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = VioletLight),
-                border = BorderStroke(1.dp, VioletPrimary)
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = SignalLight),
+                border = BorderStroke(1.dp, SignalOrange)
             ) {
                 Icon(Icons.Default.Shuffle, null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
@@ -872,9 +872,9 @@ private fun PlaylistPickerSheet(
                     .padding(horizontal = 20.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Add, contentDescription = null, tint = VioletLight, modifier = Modifier.size(22.dp))
+                Icon(Icons.Default.Add, contentDescription = null, tint = SignalLight, modifier = Modifier.size(22.dp))
                 Spacer(modifier = Modifier.width(16.dp))
-                Text("Neue Playlist erstellen", style = MaterialTheme.typography.bodyMedium, color = VioletLight)
+                Text("Neue Playlist erstellen", style = MaterialTheme.typography.bodyMedium, color = SignalLight)
             }
 
             playlists.forEach { playlist ->

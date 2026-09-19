@@ -12,6 +12,7 @@ import android.os.Binder
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.os.PowerManager
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaDescriptionCompat
 import android.support.v4.media.MediaMetadataCompat
@@ -20,6 +21,7 @@ import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.media.MediaBrowserServiceCompat
+import androidx.media.MediaSessionManager
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -42,6 +44,7 @@ import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 @AndroidEntryPoint
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class MusicService : MediaBrowserServiceCompat() {
 
     companion object {
@@ -72,6 +75,7 @@ class MusicService : MediaBrowserServiceCompat() {
     private lateinit var exoPlayer: ExoPlayer
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var dynamicsProcessing: DynamicsProcessing? = null
+    private lateinit var transitionWakeLock: PowerManager.WakeLock
 
     /** Queue/Radio/Auto-Advance leben im Service, damit die Wiedergabe auch ohne UI weiterläuft */
     lateinit var queueManager: QueueManager
@@ -120,11 +124,19 @@ class MusicService : MediaBrowserServiceCompat() {
             }
         )
         createNotificationChannel()
+        transitionWakeLock = getSystemService(PowerManager::class.java)
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "YuneMusic:TrackTransition")
+            .apply { setReferenceCounted(false) }
         initMediaSession()
         initExoPlayer()
         startProgressTracking()
         observeLimiterSetting()
         observeDucking()
+        serviceScope.launch {
+            queueManager.error.collect { error ->
+                if (error != null) syncPlaybackLifecycle()
+            }
+        }
     }
 
     override fun onBind(intent: Intent): IBinder {
@@ -170,6 +182,7 @@ class MusicService : MediaBrowserServiceCompat() {
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
 
         exoPlayer = ExoPlayer.Builder(this)
+            .setWakeMode(C.WAKE_MODE_LOCAL)
             .setRenderersFactory(renderersFactory)
             .setLoadControl(loadControl)
             .build()
@@ -183,6 +196,9 @@ class MusicService : MediaBrowserServiceCompat() {
                     _isBuffering.value = state == Player.STATE_BUFFERING
                     updatePlaybackState()
                     if (state == Player.STATE_ENDED) {
+                        // ExoPlayer releases its wake lock at EOF. Keep the CPU awake
+                        // while NewPipe resolves the next URL, before launching the job.
+                        syncPlaybackLifecycle()
                         queueManager.onTrackEnded()
                     }
                 }
@@ -191,12 +207,13 @@ class MusicService : MediaBrowserServiceCompat() {
                     _isPlaying.value = playing
                     updatePlaybackState()
                     updateNotification()
-                    // Bei Pause: Notification bleibt sichtbar, wird aber wegwischbar
-                    if (!playing && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                        stopForeground(STOP_FOREGROUND_DETACH)
-                    } else if (playing && _currentTrack.value != null) {
-                        startForegroundWithNotification()
-                    }
+                }
+
+                override fun onEvents(player: Player, events: Player.Events) {
+                    // Includes pauses during buffering, which do not change isPlaying.
+                    syncPlaybackLifecycle()
+                    updatePlaybackState()
+                    updateNotification()
                 }
 
                 override fun onAudioSessionIdChanged(audioSessionId: Int) {
@@ -313,10 +330,26 @@ class MusicService : MediaBrowserServiceCompat() {
         }
     }
 
+    private fun syncPlaybackLifecycle() {
+        val lifecycle = playbackLifecycle(
+            _currentTrack.value != null, exoPlayer.playWhenReady, exoPlayer.playbackState,
+            exoPlayer.playerError != null || queueManager.error.value != null
+        )
+        if (lifecycle.foreground) startForegroundWithNotification()
+        else stopForeground(STOP_FOREGROUND_DETACH)
+
+        if (lifecycle.transitionWakeLock) {
+            // Timeout also bounds battery use if URL extraction never completes.
+            if (!transitionWakeLock.isHeld) transitionWakeLock.acquire(60_000L)
+        } else if (transitionWakeLock.isHeld) {
+            transitionWakeLock.release()
+        }
+    }
+
     fun play() { exoPlayer.play() }
 
     fun togglePlayPause() {
-        if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
+        if (exoPlayer.playWhenReady) exoPlayer.pause() else exoPlayer.play()
     }
 
     fun seekTo(positionMs: Long) {
@@ -346,8 +379,14 @@ class MusicService : MediaBrowserServiceCompat() {
     }
 
     private fun updatePlaybackState() {
-        val state = if (exoPlayer.isPlaying) PlaybackStateCompat.STATE_PLAYING
-                    else PlaybackStateCompat.STATE_PAUSED
+        val state = when {
+            exoPlayer.playerError != null || queueManager.error.value != null -> PlaybackStateCompat.STATE_ERROR
+            !exoPlayer.playWhenReady -> PlaybackStateCompat.STATE_PAUSED
+            exoPlayer.isPlaying -> PlaybackStateCompat.STATE_PLAYING
+            exoPlayer.playbackState == Player.STATE_BUFFERING ||
+                exoPlayer.playbackState == Player.STATE_ENDED -> PlaybackStateCompat.STATE_BUFFERING
+            else -> PlaybackStateCompat.STATE_STOPPED
+        }
 
         val playbackState = PlaybackStateCompat.Builder()
             .setActions(
@@ -360,7 +399,7 @@ class MusicService : MediaBrowserServiceCompat() {
                 PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID or
                 PlaybackStateCompat.ACTION_PLAY_FROM_SEARCH
             )
-            .setState(state, exoPlayer.currentPosition, 1.0f)
+            .setState(state, exoPlayer.currentPosition, if (exoPlayer.isPlaying) 1.0f else 0.0f)
             .build()
 
         mediaSession.setPlaybackState(playbackState)
@@ -382,7 +421,7 @@ class MusicService : MediaBrowserServiceCompat() {
 
     private fun buildNotification(): Notification {
         val track = _currentTrack.value
-        val isPlaying = exoPlayer.isPlaying
+        val isPlaying = exoPlayer.playWhenReady
 
         val contentIntent = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java),
@@ -455,8 +494,14 @@ class MusicService : MediaBrowserServiceCompat() {
         clientPackageName: String,
         clientUid: Int,
         rootHints: Bundle?
-    ): BrowserRoot {
-        // Allow all callers — the app has no sensitive private content
+    ): BrowserRoot? {
+        // History and likes are private. Trust the OS media-controller policy,
+        // not an unverified package-name allowlist.
+        val client = MediaSessionManager.RemoteUserInfo(clientPackageName, -1, clientUid)
+        if (clientUid != applicationInfo.uid &&
+            !MediaSessionManager.getSessionManager(this).isTrustedForMediaControl(client)) {
+            return null
+        }
         return BrowserRoot(MEDIA_ROOT_ID, null)
     }
 
@@ -525,6 +570,7 @@ class MusicService : MediaBrowserServiceCompat() {
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     override fun onDestroy() {
+        if (::transitionWakeLock.isInitialized && transitionWakeLock.isHeld) transitionWakeLock.release()
         super.onDestroy()
         queueManager.onDestroy()
         browseCache.clear()

@@ -42,7 +42,7 @@ fun MiniPlayer(
                 modifier = Modifier
                     .fillMaxWidth(progress.coerceIn(0f, 1f))
                     .fillMaxHeight()
-                    .background(VioletPrimary)
+                    .background(SignalOrange)
             )
         }
 
@@ -70,7 +70,7 @@ fun MiniPlayer(
                         contentScale = ContentScale.Crop
                     )
                 } else {
-                    Icon(Icons.Default.MusicNote, null, tint = VioletLight)
+                    Icon(Icons.Default.MusicNote, null, tint = SignalLight)
                 }
             }
 
@@ -109,7 +109,7 @@ fun MiniPlayer(
             IconButton(onClick = onPlayPause) {
                 if (isBusy) {
                     CircularProgressIndicator(
-                        color = VioletLight,
+                        color = SignalLight,
                         modifier = Modifier.size(24.dp),
                         strokeWidth = 2.5.dp
                     )
@@ -117,7 +117,7 @@ fun MiniPlayer(
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = if (isPlaying) "Pause" else "Abspielen",
-                        tint = VioletLight,
+                        tint = SignalLight,
                         modifier = Modifier.size(30.dp)
                     )
                 }

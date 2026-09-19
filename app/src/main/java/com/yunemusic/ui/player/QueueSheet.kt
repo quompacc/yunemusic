@@ -80,7 +80,7 @@ fun QueueSheet(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(
-                                    if (isCurrent) VioletContainer.copy(alpha = 0.25f)
+                                    if (isCurrent) SignalContainer.copy(alpha = 0.25f)
                                     else Color.Transparent
                                 )
                                 .clickable { onJumpTo(index) }
@@ -91,7 +91,7 @@ fun QueueSheet(
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                                     contentDescription = null,
-                                    tint = VioletPrimary,
+                                    tint = SignalOrange,
                                     modifier = Modifier.size(20.dp)
                                 )
                             } else {
@@ -122,7 +122,7 @@ fun QueueSheet(
                                 Text(
                                     text = track.title,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = if (isCurrent) VioletLight else TextPrimary,
+                                    color = if (isCurrent) SignalLight else TextPrimary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal

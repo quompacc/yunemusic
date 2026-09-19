@@ -53,7 +53,7 @@ fun DiscoverScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var trackWithOptions by remember { mutableStateOf<Track?>(null) }
     var showSearch by remember { mutableStateOf(false) }
-    val pagerState = rememberPagerState(pageCount = { uiState.featuredTracks.size })
+
 
     val greeting = remember {
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
@@ -92,9 +92,9 @@ fun DiscoverScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text(greeting, style = MaterialTheme.typography.labelMedium, color = VioletLight)
+                Text(greeting, style = MaterialTheme.typography.labelMedium, color = SignalLight)
                 Text(
-                    text = "YuneMusic",
+                    text = "yune.",
                     style = MaterialTheme.typography.headlineMedium,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
@@ -106,7 +106,7 @@ fun DiscoverScreen(
                     showSearch = !showSearch
                 },
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(48.dp)
                     .background(SurfaceVariantDark, CircleShape)
             ) {
                 Icon(
@@ -143,7 +143,7 @@ fun DiscoverScreen(
                     inputFieldColors = TextFieldDefaults.colors(
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
-                        cursorColor = VioletPrimary
+                        cursorColor = SignalOrange
                     )
                 )
             ) {}
@@ -153,62 +153,20 @@ fun DiscoverScreen(
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 96.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            // ── Hero Carousel (full width) ───────────────────────────────────
-            if (uiState.featuredTracks.isNotEmpty()) {
+            if (!uiState.isSearchActive) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    Column {
-                        HorizontalPager(
-                            state = pagerState,
-                            contentPadding = PaddingValues(end = 32.dp),
-                            pageSpacing = 12.dp,
-                            modifier = Modifier.fillMaxWidth()
-                        ) { page ->
-                            FeaturedCard(
-                                track = uiState.featuredTracks[page],
-                                onClick = { onTrackClick(uiState.featuredTracks[page]) },
-                                onLongClick = { trackWithOptions = uiState.featuredTracks[page] }
-                            )
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            repeat(uiState.featuredTracks.size) { index ->
-                                Box(
-                                    modifier = Modifier
-                                        .padding(horizontal = 3.dp)
-                                        .size(
-                                            width = if (pagerState.currentPage == index) 20.dp else 6.dp,
-                                            height = 6.dp
-                                        )
-                                        .clip(RoundedCornerShape(3.dp))
-                                        .background(
-                                            if (pagerState.currentPage == index) VioletPrimary
-                                            else TextTertiary.copy(alpha = 0.4f)
-                                        )
-                                )
-                            }
-                        }
-                    }
-                }
-            } else if (uiState.isLoadingTrending) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(190.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(SurfaceVariantDark),
-                        contentAlignment = Alignment.Center
-                    ) { CircularProgressIndicator(color = VioletPrimary) }
+                    ListeningRoom(
+                        isLoading = uiState.isBuildingSession,
+                        error = uiState.sessionError,
+                        onPlay = { viewModel.startSession(onPlayAll) }
+                    )
                 }
             }
-
             // ── Genre Chips (full width) ─────────────────────────────────────
             item(span = { GridItemSpan(maxLineSpan) }) {
                 LazyRow(
@@ -230,8 +188,8 @@ fun DiscoverScreen(
                             colors = FilterChipDefaults.filterChipColors(
                                 containerColor = SurfaceVariantDark,
                                 labelColor = TextSecondary,
-                                selectedContainerColor = VioletContainer,
-                                selectedLabelColor = OnVioletContainer
+                                selectedContainerColor = SignalContainer,
+                                selectedLabelColor = OnSignalContainer
                             )
                         )
                     }
@@ -245,7 +203,7 @@ fun DiscoverScreen(
                         Box(
                             modifier = Modifier.fillMaxWidth().padding(40.dp),
                             contentAlignment = Alignment.Center
-                        ) { CircularProgressIndicator(color = VioletPrimary) }
+                        ) { CircularProgressIndicator(color = SignalOrange) }
                     }
                 } else if (uiState.error != null) {
                     // Fehler bei der Suche
@@ -310,11 +268,11 @@ fun DiscoverScreen(
                 if (!uiState.hasPersonalProfile && !uiState.isLoadingRecommendations) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         Card(
-                            colors = CardDefaults.cardColors(containerColor = VioletContainer.copy(alpha = 0.3f)),
+                            colors = CardDefaults.cardColors(containerColor = SignalContainer.copy(alpha = 0.3f)),
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.AutoAwesome, null, tint = VioletLight, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.AutoAwesome, null, tint = SignalLight, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
                                     "Hör mehr Musik – dein Algorithmus lernt deinen Stil",
@@ -572,7 +530,7 @@ fun SectionHeader(
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.Bold)
             if (subtitle != null) {
-                Text(subtitle, style = MaterialTheme.typography.labelSmall, color = VioletLight)
+                Text(subtitle, style = MaterialTheme.typography.labelSmall, color = SignalLight)
             }
         }
         if (onShuffle != null || onPlay != null) {
@@ -584,7 +542,7 @@ fun SectionHeader(
                 }
                 if (onPlay != null) {
                     IconButton(onClick = onPlay, modifier = Modifier.size(34.dp)) {
-                        Icon(Icons.Default.PlayCircle, null, tint = VioletLight, modifier = Modifier.size(22.dp))
+                        Icon(Icons.Default.PlayCircle, null, tint = SignalLight, modifier = Modifier.size(22.dp))
                     }
                 }
             }

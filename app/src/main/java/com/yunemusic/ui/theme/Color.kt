@@ -4,31 +4,31 @@ import androidx.compose.ui.graphics.Color
 
 // Deep dark background
 val Black = Color(0xFF000000)
-val DarkBackground = Color(0xFF0A0A0F)
-val SurfaceDark = Color(0xFF12121A)
-val SurfaceVariantDark = Color(0xFF1E1E2E)
-val CardDark = Color(0xFF1A1A28)
+val DarkBackground = Color(0xFF141715)
+val SurfaceDark = Color(0xFF1C201D)
+val SurfaceVariantDark = Color(0xFF292E29)
+val CardDark = Color(0xFF242923)
 
-// Violet accent palette
-val VioletPrimary = Color(0xFF7C3AED)
-val VioletLight = Color(0xFF9D5FF0)
-val VioletDark = Color(0xFF5B21B6)
-val VioletContainer = Color(0xFF2D1B5E)
-val OnVioletContainer = Color(0xFFE0CCFF)
+// Yune: warm paper, ink, signal orange and sage.
+val SignalOrange = Color(0xFFFF854D)
+val SignalLight = Color(0xFFFFB18B)
+val SignalDark = Color(0xFF9F421D)
+val SignalContainer = Color(0xFF492A1C)
+val OnSignalContainer = Color(0xFFFFDAC5)
 
-// Secondary - Indigo
-val IndigoPrimary = Color(0xFF6366F1)
-val IndigoLight = Color(0xFF818CF8)
-val IndigoDark = Color(0xFF4338CA)
+// Secondary - Sage
+val SagePrimary = Color(0xFFBDCE9B)
+val SageLight = Color(0xFFD9E5C2)
+val SageDark = Color(0xFF62774A)
 
 // Tertiary - Cyan accent
-val CyanAccent = Color(0xFF22D3EE)
-val CyanDark = Color(0xFF0891B2)
+val CyanAccent = Color(0xFFD7C78F)
+val CyanDark = Color(0xFFA79B6F)
 
 // Neutral text colors
-val TextPrimary = Color(0xFFF1F0FF)
-val TextSecondary = Color(0xFFB0AECF)
-val TextTertiary = Color(0xFF6B6A8A)
+val TextPrimary = Color(0xFFF4F0E6)
+val TextSecondary = Color(0xFFC1C6BA)
+val TextTertiary = Color(0xFF9BA391)
 
 // Functional colors
 val ErrorRed = Color(0xFFEF4444)
@@ -39,11 +39,11 @@ val WarningAmber = Color(0xFFF59E0B)
 val LikeRed = Color(0xFFFF4757)
 
 // Divider / outline
-val OutlineDark = Color(0xFF2E2E45)
-val OutlineVariantDark = Color(0xFF1E1E30)
+val OutlineDark = Color(0xFF444B41)
+val OutlineVariantDark = Color(0xFF32392F)
 
 // On-colors
 val OnBackground = TextPrimary
 val OnSurface = TextPrimary
-val OnPrimary = Color(0xFFFFFFFF)
-val OnSecondary = Color(0xFFFFFFFF)
+val OnPrimary = Color(0xFF141715)
+val OnSecondary = Color(0xFF141715)
