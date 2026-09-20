@@ -6,8 +6,10 @@ Werbefreier YouTube-Musikplayer für Android. Kein API-Key, kein Google-Login �
 
 - **Anonyme Wiedergabe** — NewPipe Extractor ersetzt die YouTube API vollständig
 - **Hintergrundwiedergabe** — Foreground Service mit persistenter Benachrichtigung und Medientasten-Integration
+- **Funkloch-Puffer** — bis zu fünf Minuten vorausladen, 256 MB automatisch verwalteter Audiocache und Vorbereitung der nächsten zwei Titel bei normaler Wiedergabereihenfolge; „Nur WLAN“ wird berücksichtigt
 - **Android Auto** — vollständige MediaBrowserService-Integration mit Browse-Kategorien (Geliked, Verlauf, Warteschlange)
 - **KI-Geschmacksanalyse** — lokales Taste Profile auf Basis von Hörverlauf, Likes und Skip-Verhalten
+- **Persönliche Session** — sucht ausgehend von Likes und Hörverlauf neue Musik; Zielmix 70 % Entdeckungen / 30 % vertraute Songs, mit Künstlerwechseln und weniger Wiederholungen. Ohne passende Netzwerktreffer wird die lokale Auswahl neu gemischt.
 - **Smart Radio** — kontinuierliche Wiedergabe über verwandte Tracks; bei leerem Queue automatisch nachgeladen
 - **Shuffle / Repeat / Queue-Management** — vollständige Warteschlangenverwaltung inkl. Drag-to-reorder
 - **Bibliothek** — Gelikte Songs, Hörverlauf
@@ -118,6 +120,7 @@ Tracks können direkt aus Auto heraus abgespielt werden. Sprachbefehle ("Hey Goo
 - Kein Google-Konto, kein API-Key erforderlich
 - Taste Profile, Likes und Verlauf werden ausschließlich lokal in Room gespeichert
 - Downloads werden auf Wunsch im privaten App-Speicher abgelegt; Profildaten und Downloads sind von Android-Backups und Gerätetransfers ausgeschlossen.
+- Gestreamtes Audio wird zusätzlich im privaten Cache gespeichert (maximal 256 MB Audiodaten, ältere Einträge werden verdrängt). Unter „Für Funklöcher vorladen“ kann das automatische Vorladen kommender Titel deaktiviert werden. Cache-Dateien sind keine dauerhaften Downloads und können vom Betriebssystem entfernt werden.
 
 ## Lizenz
 

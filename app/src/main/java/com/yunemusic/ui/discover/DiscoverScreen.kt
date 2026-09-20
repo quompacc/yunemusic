@@ -392,8 +392,8 @@ fun DiscoverScreen(
 fun FeaturedCard(
     track: Track,
     onClick: () -> Unit,
-    onLongClick: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null
 ) {
     Box(
         modifier = modifier
@@ -452,9 +452,9 @@ fun FeaturedCard(
 fun AlbumCard(
     track: Track,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     onLongClick: (() -> Unit)? = null,
-    subtitle: String? = null,
-    modifier: Modifier = Modifier
+    subtitle: String? = null
 ) {
     Column(
         modifier = modifier
@@ -557,8 +557,8 @@ fun SectionHeader(
 fun RecommendationCard(
     track: Track,
     onClick: () -> Unit,
-    onLongClick: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null
 ) {
     AlbumCard(track = track, onClick = onClick, onLongClick = onLongClick, modifier = modifier)
 }

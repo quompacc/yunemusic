@@ -12,6 +12,7 @@ import javax.inject.Inject
 data class SettingsUiState(
     val audioQuality: Int = 1,
     val wifiOnly: Boolean = false,
+    val prefetchEnabled: Boolean = true,
     val carModeTrigger: String = "manual",
     val loudnessLimiter: Boolean = true,
     val duckOnNotification: Boolean = true,
@@ -29,6 +30,11 @@ class SettingsViewModel @Inject constructor(
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            userPreferences.prefetchEnabled.collect { enabled ->
+                _uiState.update { it.copy(prefetchEnabled = enabled) }
+            }
+        }
         viewModelScope.launch {
             combine(
                 userPreferences.audioQuality,
@@ -68,6 +74,10 @@ class SettingsViewModel @Inject constructor(
 
     fun updateWifiOnly(enabled: Boolean) {
         viewModelScope.launch { userPreferences.setWifiOnly(enabled) }
+    }
+
+    fun updatePrefetchEnabled(enabled: Boolean) {
+        viewModelScope.launch { userPreferences.setPrefetchEnabled(enabled) }
     }
 
     fun updateCarModeTrigger(trigger: String) {

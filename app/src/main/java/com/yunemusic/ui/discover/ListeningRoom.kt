@@ -37,8 +37,8 @@ fun ListeningRoom(isLoading: Boolean, error: String?, onPlay: () -> Unit) {
             style = MaterialTheme.typography.displaySmall,
             fontFamily = FontFamily.Serif, color = DarkBackground)
         Text(
-            error ?: if (isLoading) "Deine Hörhistorie wird ausgewertet …"
-                else "Deine besten Songs. Aus deinen Likes und deinem Hörverlauf zusammengestellt.",
+            error ?: if (isLoading) "Passende neue Songs werden für dich gesucht …"
+                else "Neue Entdeckungen und vertraute Favoriten. Inspiriert von deinen Likes und deinem Hörverlauf.",
             style = MaterialTheme.typography.bodyMedium, color = Color(0xFF50584B)
         )
         Button(

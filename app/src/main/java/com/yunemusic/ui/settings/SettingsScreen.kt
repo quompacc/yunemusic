@@ -82,6 +82,22 @@ fun SettingsScreen(
         ) {
             // Audio Quality Section
             item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardDark)
+                ) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Für Funklöcher vorladen", style = MaterialTheme.typography.titleSmall)
+                            Text("Bis zu 5 Minuten Puffer und 256 MB Audiocache. Lädt ohne Shuffle die nächsten 2 Titel vor. Kann zusätzliche mobile Daten verbrauchen; berücksichtigt „Nur WLAN“.",
+                                style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                        }
+                        Switch(checked = uiState.prefetchEnabled,
+                            onCheckedChange = viewModel::updatePrefetchEnabled)
+                    }
+                }
+            }
+            item {
                 SettingsSectionHeader("Audio")
             }
             item {

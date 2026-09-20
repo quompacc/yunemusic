@@ -2,6 +2,7 @@ package com.yunemusic.data
 
 import com.yunemusic.domain.model.PlayEvent
 import com.yunemusic.domain.model.Track
+import com.yunemusic.domain.model.TasteProfile
 import com.yunemusic.domain.repository.MusicRepository
 import com.yunemusic.domain.usecase.BuildPersonalSessionUseCase
 import com.yunemusic.domain.usecase.rankSessionTracks
@@ -46,16 +47,19 @@ class PersonalSessionTest {
         assertTrue(rankSessionTracks(listOf(track("unliked")), emptySet(), listOf(pastLike), now).isEmpty())
     }
 
-    @Test fun sessionReadsDatabaseFreshAndNeverFetchesRecommendationsOrTrending() = runBlocking {
+    @Test fun sessionReadsDatabaseFreshAndFallsBackLocallyWithoutTrending() = runBlocking {
         var liked = listOf(track("first"))
-        val calls = mutableListOf<String>()
+        val calls = java.util.Collections.synchronizedList(mutableListOf<String>())
         val repository = Proxy.newProxyInstance(MusicRepository::class.java.classLoader,
             arrayOf(MusicRepository::class.java)) { _, method, _ ->
-            calls += method.name
-            when (method.name) {
+            val name = method.name.substringBefore('-') // Kotlin Result-returning methods are mangled.
+            calls += name
+            when (name) {
                 "getSavedTracks" -> flowOf(listOf(track("first"), track("second")))
                 "getLikedTracks" -> flowOf(liked)
                 "getPlayHistory" -> flowOf(emptyList<PlayEvent>())
+                "getTasteProfile" -> TasteProfile()
+                "getRelatedTracks", "searchTracks" -> emptyList<Track>() // Result's JVM representation
                 else -> error("Session must not call ${method.name}")
             }
         } as MusicRepository
@@ -63,6 +67,8 @@ class PersonalSessionTest {
         assertEquals(listOf("first"), session().map { it.id })
         liked = listOf(track("second"))
         assertEquals(listOf("second"), session().map { it.id })
-        assertEquals(6, calls.size)
+        assertEquals(2, calls.count { it == "getSavedTracks" })
+        assertTrue("getTrending" !in calls)
+        assertTrue("getRelatedTracks" in calls)
     }
 }

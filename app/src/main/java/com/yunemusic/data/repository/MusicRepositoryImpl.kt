@@ -15,6 +15,7 @@ import com.yunemusic.data.local.entities.toEntity
 import com.yunemusic.data.local.entities.toPlaylistTrack
 import com.yunemusic.data.local.entities.toTrack
 import com.yunemusic.data.preferences.UserPreferences
+import com.yunemusic.data.cache.StreamingCache
 import com.yunemusic.data.youtube.YouTubeRepository
 import com.yunemusic.domain.model.DownloadState
 import com.yunemusic.domain.model.PlayEvent
@@ -50,7 +51,8 @@ class MusicRepositoryImpl @Inject constructor(
     private val playEventDao: PlayEventDao,
     private val playlistDao: PlaylistDao,
     private val downloadDao: DownloadDao,
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
+    private val streamingCache: StreamingCache
 ) : MusicRepository {
 
     companion object {
@@ -76,12 +78,16 @@ class MusicRepositoryImpl @Inject constructor(
         youTubeRepository.getTrackInfo(videoId)
 
     override suspend fun getStreamUrl(videoId: String): Result<String> {
+        val quality = userPreferences.audioQuality.firstOrNull() ?: 1
+        // A complete cache entry needs neither a fresh YouTube lookup nor reception.
+        streamingCache.completeUrl(videoId, quality)?.let { return Result.success(it) }
         val wifiOnly = userPreferences.wifiOnly.firstOrNull() ?: false
         if (wifiOnly && !isOnWifi()) {
             return Result.failure(Exception("Kein WLAN verfügbar. Streaming nur über WLAN."))
         }
-        val quality = userPreferences.audioQuality.firstOrNull() ?: 1
-        return youTubeRepository.getAudioStreamUrl(videoId, quality)
+        return youTubeRepository.getAudioStreamUrl(videoId, quality).onSuccess {
+            streamingCache.register(videoId, quality, it)
+        }
     }
 
     private fun isOnWifi(): Boolean {

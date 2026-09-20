@@ -1,13 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- App colors matching Compose theme -->
-    <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="dark_background">#FF0A0A0F</color>
-    <color name="surface_dark">#FF12121A</color>
-    <color name="violet_primary">#FF7C3AED</color>
-    <color name="violet_light">#FF9D5FF0</color>
-    <color name="violet_dark">#FF5B21B6</color>
-    <color name="text_primary">#FFF1F0FF</color>
-    <color name="text_secondary">#FFB0AECF</color>
 </resources>

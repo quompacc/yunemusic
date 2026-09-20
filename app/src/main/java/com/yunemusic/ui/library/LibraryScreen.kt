@@ -194,8 +194,10 @@ fun LibraryScreen(
             colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
         )
 
-        TabRow(
+        // Give each label its required width; narrow screens / large fonts can scroll.
+        ScrollableTabRow(
             selectedTabIndex = selectedTab,
+            edgePadding = 0.dp,
             containerColor = DarkBackground,
             contentColor = SignalOrange,
             indicator = { tabPositions ->
@@ -218,6 +220,8 @@ fun LibraryScreen(
                     text = {
                         Text(
                             text = title,
+                            maxLines = 1,
+                            softWrap = false,
                             color = if (selectedTab == index) SignalLight else TextSecondary,
                             style = MaterialTheme.typography.labelLarge
                         )

@@ -23,8 +23,8 @@ android {
         minSdk = 26
         targetSdk = 34
         // CI (Gitea Actions) setzt -PciVersionCode/-PciVersionName pro Build
-        versionCode = (project.findProperty("ciVersionCode") as? String)?.toIntOrNull() ?: 8
-        versionName = (project.findProperty("ciVersionName") as? String) ?: "1.3.2"
+        versionCode = (project.findProperty("ciVersionCode") as? String)?.toIntOrNull() ?: 13
+        versionName = (project.findProperty("ciVersionName") as? String) ?: "1.5.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -44,8 +44,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled   = false  // R8 8.5.35 CME-Bug mit Rhino — nach AGP-Upgrade reaktivieren
-            isShrinkResources = false
+            isMinifyEnabled   = true
+            isShrinkResources = true
             signingConfig     = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -128,7 +128,7 @@ dependencies {
     // NewPipe Extractor (YouTube anonym, kein API-Key)
     // dev-SNAPSHOT für aktuelle YouTube-Kompatibilität; URLEncoder-Crash via coreLibraryDesugaring behoben
     implementation("com.github.TeamNewPipe:NewPipeExtractor:dev-SNAPSHOT") { isChanging = true }
-    implementation("org.mozilla:rhino:1.7.15")
+    implementation("org.mozilla:rhino:1.8.1")
 
     // OkHttp (HTTP-Client für NewPipe)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")

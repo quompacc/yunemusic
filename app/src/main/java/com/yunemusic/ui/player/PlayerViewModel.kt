@@ -64,7 +64,9 @@ class PlayerViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
-    private var musicService: MusicService? = null
+    // The Android binding owns the Service lifetime; the ViewModel must not retain its Context.
+    private var connectedService = java.lang.ref.WeakReference<MusicService>(null)
+    private val musicService: MusicService? get() = connectedService.get()
     private var serviceBound = false
     private var observeJob: Job? = null
     private var downloadJob: Job? = null
@@ -77,7 +79,7 @@ class PlayerViewModel @Inject constructor(
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             val binder = service as MusicService.MusicBinder
             val svc = binder.getService()
-            musicService = svc
+            connectedService = java.lang.ref.WeakReference(svc)
             observeServiceState(svc)
             pendingCommand?.let { cmd ->
                 pendingCommand = null
@@ -89,7 +91,7 @@ class PlayerViewModel @Inject constructor(
             // Bindung besteht weiter (System versucht Auto-Rebind):
             // serviceBound NICHT zurücksetzen, sonst leakt die Connection in onCleared
             observeJob?.cancel()
-            musicService = null
+            connectedService.clear()
         }
     }
 
@@ -154,6 +156,11 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun togglePlayPause() = withService { it.togglePlayPause() }
+
+    fun playFromSearch(query: String?) {
+        startServiceIfNeeded()
+        withService { it.playFromSearch(query) }
+    }
 
     fun skipNext() = withService { it.queueManager.skipNext() }
 
@@ -262,7 +269,7 @@ class PlayerViewModel @Inject constructor(
                         val pct = if (state.progress >= 0) {
                             "${(state.progress * 100).toInt()}%"
                         } else {
-                            String.format("%.1f MB", state.mbDownloaded)
+                            String.format(java.util.Locale.getDefault(), "%.1f MB", state.mbDownloaded)
                         }
                         _uiState.update {
                             it.copy(
@@ -327,6 +334,8 @@ class PlayerViewModel @Inject constructor(
         super.onCleared()
         downloadJob?.cancel()
         observeJob?.cancel()
+        pendingCommand = null
+        connectedService.clear()
         if (serviceBound) {
             try {
                 context.unbindService(serviceConnection)

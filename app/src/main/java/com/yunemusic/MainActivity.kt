@@ -1,6 +1,11 @@
 package com.yunemusic
 
 import android.Manifest
+import android.content.Intent
+import android.provider.MediaStore
+import androidx.activity.viewModels
+import com.yunemusic.ui.player.PlayerViewModel
+import com.yunemusic.service.voiceSearchQuery
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -18,6 +23,7 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    private val playerViewModel: PlayerViewModel by viewModels()
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -27,6 +33,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         requestNotificationPermissionIfNeeded()
+        if (savedInstanceState == null) handlePlaybackIntent(intent)
 
         setContent {
             YuneMusicTheme {
@@ -34,9 +41,21 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    YuneMusicNavHost()
+                    YuneMusicNavHost(playerViewModel)
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handlePlaybackIntent(intent)
+    }
+
+    private fun handlePlaybackIntent(intent: Intent?) {
+        if (intent?.action == MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH) {
+            playerViewModel.playFromSearch(voiceSearchQuery(intent))
         }
     }
 

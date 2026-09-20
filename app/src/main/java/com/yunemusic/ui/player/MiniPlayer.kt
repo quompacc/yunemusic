@@ -23,12 +23,12 @@ import com.yunemusic.ui.theme.*
 fun MiniPlayer(
     track: Track,
     isPlaying: Boolean,
-    isBusy: Boolean = false,
     progress: Float,
     onPlayPause: () -> Unit,
     onSkipNext: () -> Unit,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isBusy: Boolean = false
 ) {
     Column(modifier = modifier) {
         // Dünner Fortschrittsbalken oben

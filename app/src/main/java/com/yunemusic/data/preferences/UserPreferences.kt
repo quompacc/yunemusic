@@ -21,6 +21,7 @@ class UserPreferences @Inject constructor(
     companion object {
         val KEY_AUDIO_QUALITY = intPreferencesKey("audio_quality") // 0=128, 1=256, 2=320
         val KEY_WIFI_ONLY = booleanPreferencesKey("wifi_only")
+        val KEY_PREFETCH_ENABLED = booleanPreferencesKey("prefetch_enabled")
         val KEY_CAR_MODE_TRIGGER = stringPreferencesKey("car_mode_trigger") // bluetooth, manual
         val KEY_TASTE_PROFILE_JSON = stringPreferencesKey("taste_profile_json")
         val KEY_LOUDNESS_LIMITER = booleanPreferencesKey("loudness_limiter")
@@ -47,6 +48,14 @@ class UserPreferences @Inject constructor(
             else throw exception
         }
         .map { prefs -> prefs[KEY_CAR_MODE_TRIGGER] ?: "manual" }
+
+    val prefetchEnabled: Flow<Boolean> = context.dataStore.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { it[KEY_PREFETCH_ENABLED] ?: true }
+
+    suspend fun setPrefetchEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[KEY_PREFETCH_ENABLED] = enabled }
+    }
 
     val loudnessLimiter: Flow<Boolean> = context.dataStore.data
         .catch { exception ->

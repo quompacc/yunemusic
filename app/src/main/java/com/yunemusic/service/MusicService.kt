@@ -29,6 +29,8 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import com.yunemusic.data.cache.StreamingCache
 import com.yunemusic.MainActivity
 import com.yunemusic.R
 import com.yunemusic.domain.model.Track
@@ -70,12 +72,19 @@ class MusicService : MediaBrowserServiceCompat() {
     @Inject lateinit var playTrackUseCase: PlayTrackUseCase
     @Inject lateinit var tasteAnalyzer: TasteAnalyzer
     @Inject lateinit var duckingController: DuckingController
+    @Inject lateinit var streamingCache: StreamingCache
 
     private lateinit var mediaSession: MediaSessionCompat
     private lateinit var exoPlayer: ExoPlayer
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var dynamicsProcessing: DynamicsProcessing? = null
     private lateinit var transitionWakeLock: PowerManager.WakeLock
+    private var prefetchJob: Job? = null
+    private var voiceSearchJob: Job? = null
+    // Never persisted or logged; old notification capabilities fail closed after service restart.
+    private val controlToken = java.util.UUID.randomUUID().toString()
+    private var nextPrefetchAt = 0L
+    @Volatile private var prefetchReady = false
 
     /** Queue/Radio/Auto-Advance leben im Service, damit die Wiedergabe auch ohne UI weiterläuft */
     lateinit var queueManager: QueueManager
@@ -171,11 +180,12 @@ class MusicService : MediaBrowserServiceCompat() {
 
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                10000,  // minBufferMs — schneller Start
-                30000,  // maxBufferMs — weniger RAM als Default (50s)
+                60000,  // Maintain a larger reserve through short reception gaps.
+                300000, // Up to five minutes ahead; disk cache also retains these bytes.
                 1500,   // bufferForPlaybackMs
                 3000    // bufferForPlaybackAfterRebufferMs
             )
+            .setPrioritizeTimeOverSizeThresholds(true)
             .build()
 
         val renderersFactory = DefaultRenderersFactory(this)
@@ -183,6 +193,7 @@ class MusicService : MediaBrowserServiceCompat() {
 
         exoPlayer = ExoPlayer.Builder(this)
             .setWakeMode(C.WAKE_MODE_LOCAL)
+            .setMediaSourceFactory(DefaultMediaSourceFactory(streamingCache.dataSourceFactory))
             .setRenderersFactory(renderersFactory)
             .setLoadControl(loadControl)
             .build()
@@ -210,6 +221,7 @@ class MusicService : MediaBrowserServiceCompat() {
                 }
 
                 override fun onEvents(player: Player, events: Player.Events) {
+                    updatePrefetch()
                     // Includes pauses during buffering, which do not change isPlaying.
                     syncPlaybackLifecycle()
                     updatePlaybackState()
@@ -230,6 +242,7 @@ class MusicService : MediaBrowserServiceCompat() {
     private fun startProgressTracking() {
         serviceScope.launch {
             while (true) {
+                updatePrefetch()
                 if (exoPlayer.isPlaying) {
                     val duration = exoPlayer.duration
                     val position = exoPlayer.currentPosition
@@ -238,6 +251,43 @@ class MusicService : MediaBrowserServiceCompat() {
                     }
                 }
                 delay(500)
+            }
+        }
+    }
+
+    private fun updatePrefetch() {
+        prefetchReady = exoPlayer.isPlaying && exoPlayer.totalBufferedDuration >= 30_000L &&
+            !queueManager.isLoading.value && !queueManager.isShuffleEnabled.value &&
+            streamingCache.prefetchEnabled.value && streamingCache.networkAllowed()
+        if (!prefetchReady) {
+            prefetchJob?.cancel()
+            return
+        }
+        if (prefetchJob?.isCompleted == false || android.os.SystemClock.elapsedRealtime() < nextPrefetchAt) return
+        val currentId = _currentTrack.value?.id ?: return
+        val upcoming = queueManager.queue.value.drop(queueManager.currentIndex.value + 1)
+            .distinctBy { it.id }.take(2)
+        if (upcoming.isEmpty()) return
+        nextPrefetchAt = android.os.SystemClock.elapsedRealtime() + 30_000L
+        prefetchJob = serviceScope.launch {
+            for (track in upcoming) {
+                ensureActive()
+                fun stillWanted() = prefetchReady && _currentTrack.value?.id == currentId &&
+                    track.id in queueManager.queue.value.drop(queueManager.currentIndex.value + 1)
+                        .take(2).map { it.id }
+                if (!stillWanted()) break
+                try {
+                    // Explicit downloads already work offline and must not be fetched twice.
+                    if (repository.getDownloadFilePath(track.id) != null) continue
+                    val quality = userPreferences.audioQuality.first()
+                    if (streamingCache.completeUrl(track.id, quality) != null) continue
+                    val url = repository.getStreamUrl(track.id).getOrThrow()
+                    if (stillWanted()) streamingCache.prefetch(url, ::stillWanted)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    // Speculative work must never stop the currently playing track.
+                }
             }
         }
     }
@@ -431,17 +481,24 @@ class MusicService : MediaBrowserServiceCompat() {
             this, 0,
             Intent(this, MusicService::class.java).apply {
                 action = if (isPlaying) ACTION_PAUSE else ACTION_PLAY
+                putExtra(EXTRA_CONTROL_TOKEN, controlToken)
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val nextIntent = PendingIntent.getService(
             this, 1,
-            Intent(this, MusicService::class.java).apply { action = ACTION_NEXT },
+            Intent(this, MusicService::class.java).apply {
+                action = ACTION_NEXT
+                putExtra(EXTRA_CONTROL_TOKEN, controlToken)
+            },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val prevIntent = PendingIntent.getService(
             this, 2,
-            Intent(this, MusicService::class.java).apply { action = ACTION_PREV },
+            Intent(this, MusicService::class.java).apply {
+                action = ACTION_PREV
+                putExtra(EXTRA_CONTROL_TOKEN, controlToken)
+            },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -474,6 +531,9 @@ class MusicService : MediaBrowserServiceCompat() {
     // ── onStartCommand (notification button intents) ──────────────────────────
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action != null && !isAuthorizedPlaybackCommand(intent, controlToken)) {
+            return START_NOT_STICKY
+        }
         when (intent?.action) {
             ACTION_PLAY  -> exoPlayer.play()
             ACTION_PAUSE -> exoPlayer.pause()
@@ -486,6 +546,23 @@ class MusicService : MediaBrowserServiceCompat() {
             }
         }
         return START_STICKY
+    }
+
+    /** Shared by the Activity voice intent and trusted MediaSession controllers. */
+    fun playFromSearch(query: String?) {
+        voiceSearchJob?.cancel()
+        val search = query?.trim().orEmpty()
+        if (search.isEmpty() && _currentTrack.value != null) {
+            play()
+            return
+        }
+        voiceSearchJob = serviceScope.launch {
+            val results = if (search.isEmpty()) repository.getLikedTracks().first()
+                else repository.searchTracks(search, null).getOrElse { emptyList() }
+            ensureActive()
+            val playable = results.filter { it.id.isNotBlank() }.take(20)
+            if (playable.isNotEmpty()) queueManager.playQueue(playable, 0)
+        }
     }
 
     // ── Android Auto: MediaBrowser ────────────────────────────────────────────
@@ -596,16 +673,7 @@ class MusicService : MediaBrowserServiceCompat() {
         }
 
         override fun onPlayFromSearch(query: String?, extras: Bundle?) {
-            // Voice search aus Android Auto: "Hey Google, spiel [Song] auf YuneMusic"
-            if (query.isNullOrBlank()) return
-            Log.d(TAG, "Voice search: $query")
-            serviceScope.launch {
-                val results = repository.searchTracks(query, null).getOrElse { emptyList() }
-                    .filter { it.id.isNotBlank() }
-                if (results.isNotEmpty()) {
-                    queueManager.playQueue(results.take(20), 0)
-                }
-            }
+            this@MusicService.playFromSearch(query)
         }
 
         override fun onStop() {

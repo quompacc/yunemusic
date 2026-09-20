@@ -71,7 +71,7 @@ sealed class Screen(
 val bottomNavScreens = listOf(Screen.Home, Screen.Library, Screen.Settings)
 
 @Composable
-fun YuneMusicNavHost() {
+fun YuneMusicNavHost(playerViewModel: PlayerViewModel = hiltViewModel()) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -81,7 +81,6 @@ fun YuneMusicNavHost() {
         Screen.CarMode.route
     )
 
-    val playerViewModel: PlayerViewModel = hiltViewModel()
     val playerUiState by playerViewModel.uiState.collectAsStateWithLifecycle()
 
     fun navigateToPlayer() {
