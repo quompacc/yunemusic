@@ -1,0 +1,2 @@
+- Kleinere APK: nur noch englische und deutsche Ressourcen enthalten
+- Keine gemischtsprachigen Systemtexte mehr auf Geräten mit anderer Sprache

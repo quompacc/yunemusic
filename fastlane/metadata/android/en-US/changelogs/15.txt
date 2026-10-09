@@ -1,0 +1,2 @@
+- Smaller APK: only English and German resources are included
+- Fixes mixed-language system texts on devices set to other languages

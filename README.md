@@ -2,6 +2,13 @@
 
 Werbefreier YouTube-Musikplayer für Android. Kein API-Key, kein Google-Login — alle Daten werden anonym über [NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor) abgerufen.
 
+<p align="center">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width="22%" alt="Screenshot 1">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width="22%" alt="Screenshot 2">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" width="22%" alt="Screenshot 3">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.png" width="22%" alt="Screenshot 4">
+</p>
+
 ## Features
 
 - **Anonyme Wiedergabe** — NewPipe Extractor ersetzt die YouTube API vollständig
