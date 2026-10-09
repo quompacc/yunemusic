@@ -49,3 +49,9 @@ jobs:
           [ -f "$NOTES" ] || NOTES=/dev/null
           gh release create "$GITHUB_REF_NAME" YuneMusic-*.apk YuneMusic-*.apk.sha256 \
             --title "YuneMusic ${GITHUB_REF_NAME#v}" --notes-file "$NOTES"
+
+  # Eigenes F-Droid-Repo mit dem neuen Release aktualisieren
+  fdroid:
+    needs: release
+    uses: ./.github/workflows/fdroid-repo.yml
+    secrets: inherit

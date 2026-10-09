@@ -1,0 +1,84 @@
+# Eigenes F-Droid-Repo: baut aus den letzten drei stabilen GitHub-Releases einen
+# signierten F-Droid-Index und veröffentlicht ihn im Branch "fdroid".
+#
+# Repo-Adresse für die F-Droid-App:
+#   https://raw.githubusercontent.com/quompacc/yunemusic/fdroid/repo
+#
+# Läuft automatisch nach jedem Release (aufgerufen aus release.yml) und lässt sich
+# unter Actions → F-Droid-Repo → "Run workflow" manuell starten.
+# Der Index wird mit demselben Keystore signiert wie die APKs (Secrets wie in release.yml).
+
+name: F-Droid-Repo
+
+on:
+  workflow_call: {}
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: fdroidserver installieren
+        run: pip install fdroidserver
+
+      - name: Keystore aus Secret wiederherstellen
+        run: echo "${{ secrets.KEYSTORE_B64 }}" | base64 -d > "$RUNNER_TEMP/yunemusic.jks"
+
+      - name: APKs der letzten drei stabilen Releases laden
+        run: |
+          mkdir -p apks
+          gh release list --exclude-pre-releases --limit 3 --json tagName --jq '.[].tagName' |
+            while read -r tag; do
+              gh release download "$tag" --pattern 'YuneMusic-*.apk' --dir apks
+            done
+          ls -l apks
+          ls apks/*.apk >/dev/null
+
+      - name: F-Droid-Repo bauen
+        env:
+          REPO_URL: https://raw.githubusercontent.com/${{ github.repository }}/fdroid/repo
+          KEYSTORE_FILE: ${{ runner.temp }}/yunemusic.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: bash scripts/build-fdroid-repo.sh apks out
+
+      - name: Im Branch "fdroid" veröffentlichen
+        run: |
+          cd out
+          git init -q -b fdroid
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "F-Droid-Repo aktualisiert (${GITHUB_SHA::7})"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" fdroid
+
+      - name: Fingerprint in die Zusammenfassung schreiben
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          FP=$(keytool -exportcert -keystore "$RUNNER_TEMP/yunemusic.jks" -storepass "$KEYSTORE_PASSWORD" \
+                 -alias "$KEY_ALIAS" | sha256sum | cut -d' ' -f1 | tr a-f A-F)
+          {
+            echo "### F-Droid-Repo veröffentlicht"
+            echo "Adresse: https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/fdroid/repo"
+            echo
+            echo "Fingerprint: \`$FP\`"
+          } >> "$GITHUB_STEP_SUMMARY"

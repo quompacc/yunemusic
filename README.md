@@ -16,6 +16,20 @@ Werbefreier YouTube-Musikplayer für Android. Kein API-Key, kein Google-Login �
 - **Car Mode** — vereinfachtes Vollbild-UI für die Nutzung im Auto
 - **Sprachen** — Englisch (Standard) und Deutsch; ab Android 13 pro App umschaltbar
 
+## Installation über F-Droid
+
+YuneMusic hat ein eigenes F-Droid-Repo, das bei jedem Release automatisch aktualisiert wird.
+
+1. In der F-Droid-App: **Einstellungen → Paketquellen → +**
+2. Adresse: `https://raw.githubusercontent.com/quompacc/yunemusic/fdroid/repo`
+3. Fingerprint: `5FC373CD56EAF5394D20A73AB11F9843101CE4C1E92E08DD7A792A7CDE98649F`
+
+Oder auf dem Handy direkt öffnen:
+[Repo hinzufügen](fdroidrepos://raw.githubusercontent.com/quompacc/yunemusic/fdroid/repo?fingerprint=5FC373CD56EAF5394D20A73AB11F9843101CE4C1E92E08DD7A792A7CDE98649F)
+
+Alternativ: APK aus den [Releases](https://github.com/quompacc/yunemusic/releases) oder über
+[Obtainium](https://github.com/ImranR98/Obtainium) mit der GitHub-URL des Repos.
+
 ## Tech Stack
 
 | Bereich | Bibliothek |
