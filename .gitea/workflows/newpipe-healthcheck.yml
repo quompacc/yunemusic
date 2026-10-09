@@ -54,7 +54,7 @@ jobs:
       - name: Smoke-Test mit aktuellem NewPipe dev-SNAPSHOT
         run: |
           chmod +x gradlew
-          ./gradlew --refresh-dependencies --no-daemon \
+          ./gradlew -PnewpipeVersion=dev-SNAPSHOT --refresh-dependencies --no-daemon \
             :app:testDebugUnitTest --tests "com.yunemusic.smoke.NewPipeSmokeTest"
 
       - name: Issue bei Fehlschlag anlegen
@@ -99,7 +99,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           chmod +x gradlew
-          ./gradlew --refresh-dependencies --no-daemon \
+          ./gradlew -PnewpipeVersion=dev-SNAPSHOT --refresh-dependencies --no-daemon \
             -PciVersionCode=${{ github.run_number }} \
             -PciVersionName="1.0.${{ github.run_number }}" \
             :app:assembleRelease

@@ -13,11 +13,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.yunemusic.R
 import com.yunemusic.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,10 +35,10 @@ fun SettingsScreen(
     if (showResetDialog) {
         AlertDialog(
             onDismissRequest = { showResetDialog = false },
-            title = { Text("Taste Profile zurucksetzen?", color = TextPrimary) },
+            title = { Text(stringResource(R.string.settings_reset_dialog_title), color = TextPrimary) },
             text = {
                 Text(
-                    "Alle Horpraferenzen werden geloscht. Diese Aktion kann nicht ruckgangig gemacht werden.",
+                    stringResource(R.string.settings_reset_dialog_text),
                     color = TextSecondary
                 )
             },
@@ -47,12 +49,12 @@ fun SettingsScreen(
                         showResetDialog = false
                     }
                 ) {
-                    Text("Zurucksetzen", color = ErrorRed)
+                    Text(stringResource(R.string.settings_reset_confirm), color = ErrorRed)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showResetDialog = false }) {
-                    Text("Abbrechen", color = TextSecondary)
+                    Text(stringResource(R.string.settings_cancel), color = TextSecondary)
                 }
             },
             containerColor = SurfaceVariantDark
@@ -67,7 +69,7 @@ fun SettingsScreen(
         TopAppBar(
             title = {
                 Text(
-                    text = "Einstellungen",
+                    text = stringResource(R.string.settings_title),
                     style = MaterialTheme.typography.headlineSmall,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
@@ -88,8 +90,8 @@ fun SettingsScreen(
                 ) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("Für Funklöcher vorladen", style = MaterialTheme.typography.titleSmall)
-                            Text("Bis zu 5 Minuten Puffer und 256 MB Audiocache. Lädt ohne Shuffle die nächsten 2 Titel vor. Kann zusätzliche mobile Daten verbrauchen; berücksichtigt „Nur WLAN“.",
+                            Text(stringResource(R.string.settings_prefetch_title), style = MaterialTheme.typography.titleSmall)
+                            Text(stringResource(R.string.settings_prefetch_desc),
                                 style = MaterialTheme.typography.bodySmall, color = TextSecondary)
                         }
                         Switch(checked = uiState.prefetchEnabled,
@@ -98,7 +100,7 @@ fun SettingsScreen(
                 }
             }
             item {
-                SettingsSectionHeader("Audio")
+                SettingsSectionHeader(stringResource(R.string.settings_section_audio))
             }
             item {
                 Card(
@@ -110,12 +112,16 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "Audio-Qualitat",
+                            text = stringResource(R.string.settings_audio_quality),
                             style = MaterialTheme.typography.titleSmall,
                             color = TextPrimary
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        val qualities = listOf("Niedrig (~128 kbps)", "Mittel (~256 kbps)", "Hoch (Beste Qualität)")
+                        val qualities = listOf(
+                            stringResource(R.string.settings_quality_low),
+                            stringResource(R.string.settings_quality_medium),
+                            stringResource(R.string.settings_quality_high)
+                        )
                         qualities.forEachIndexed { index, label ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -157,12 +163,12 @@ fun SettingsScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Lautstärke-Begrenzer",
+                                text = stringResource(R.string.settings_loudness_limiter_title),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = TextPrimary
                             )
                             Text(
-                                text = "Verhindert Verzerrung bei maximaler Lautstärke",
+                                text = stringResource(R.string.settings_loudness_limiter_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TextTertiary
                             )
@@ -198,12 +204,12 @@ fun SettingsScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Bei Benachrichtigungen leiser",
+                                text = stringResource(R.string.settings_duck_title),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = TextPrimary
                             )
                             Text(
-                                text = "Musik wird kurz leiser, wenn Nachrichten eintreffen. Benötigt Benachrichtigungszugriff.",
+                                text = stringResource(R.string.settings_duck_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TextTertiary
                             )
@@ -236,7 +242,7 @@ fun SettingsScreen(
 
             // Data Mode Section
             item {
-                SettingsSectionHeader("Netzwerk")
+                SettingsSectionHeader(stringResource(R.string.settings_section_network))
             }
             item {
                 Card(
@@ -255,12 +261,12 @@ fun SettingsScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Nur WLAN",
+                                text = stringResource(R.string.settings_wifi_only_title),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = TextPrimary
                             )
                             Text(
-                                text = "Streaming nur uber WLAN erlauben",
+                                text = stringResource(R.string.settings_wifi_only_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TextTertiary
                             )
@@ -281,7 +287,7 @@ fun SettingsScreen(
 
             // Car Mode Section
             item {
-                SettingsSectionHeader("Car Mode")
+                SettingsSectionHeader(stringResource(R.string.settings_section_car_mode))
             }
             item {
                 Card(
@@ -293,12 +299,15 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "Aktivierung",
+                            text = stringResource(R.string.settings_car_mode_activation),
                             style = MaterialTheme.typography.titleSmall,
                             color = TextPrimary
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        val triggers = listOf("Manuell", "Bluetooth")
+                        val triggers = listOf(
+                            stringResource(R.string.settings_car_mode_manual),
+                            stringResource(R.string.settings_car_mode_bluetooth)
+                        )
                         val triggerValues = listOf("manual", "bluetooth")
                         triggers.forEachIndexed { index, label ->
                             Row(
@@ -334,7 +343,7 @@ fun SettingsScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Car Mode offnen", color = OnSignalContainer)
+                            Text(stringResource(R.string.settings_open_car_mode), color = OnSignalContainer)
                         }
                     }
                 }
@@ -342,7 +351,7 @@ fun SettingsScreen(
 
             // Profile Section
             item {
-                SettingsSectionHeader("Profil")
+                SettingsSectionHeader(stringResource(R.string.settings_section_profile))
             }
             item {
                 Card(
@@ -354,12 +363,12 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "Taste Profile",
+                            text = stringResource(R.string.settings_taste_profile),
                             style = MaterialTheme.typography.titleSmall,
                             color = TextPrimary
                         )
                         Text(
-                            text = "Deine Horpraferenzen werden automatisch aus deiner Wiedergabe gelernt.",
+                            text = stringResource(R.string.settings_taste_profile_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = TextTertiary,
                             modifier = Modifier.padding(top = 4.dp)
@@ -380,7 +389,7 @@ fun SettingsScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Taste Profile zurucksetzen")
+                            Text(stringResource(R.string.settings_reset_taste_profile))
                         }
                     }
                 }
@@ -399,7 +408,7 @@ fun SettingsScreen(
                         )
                     ) {
                         Text(
-                            text = message,
+                            text = stringResource(message),
                             modifier = Modifier.padding(16.dp),
                             color = if (uiState.isError) ErrorRed else SuccessGreen,
                             style = MaterialTheme.typography.bodyMedium

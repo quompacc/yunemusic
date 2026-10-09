@@ -16,6 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -24,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.yunemusic.R
 import com.yunemusic.ui.player.PlayerViewModel
 import com.yunemusic.ui.theme.*
 
@@ -82,7 +84,7 @@ fun CarModeScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Car Mode beenden",
+                        contentDescription = stringResource(R.string.carmode_exit),
                         tint = TextTertiary,
                         modifier = Modifier.size(28.dp)
                     )
@@ -96,7 +98,7 @@ fun CarModeScreen(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Car Mode",
+                        text = stringResource(R.string.carmode_title),
                         style = MaterialTheme.typography.labelLarge,
                         color = SignalLight
                     )
@@ -115,7 +117,7 @@ fun CarModeScreen(
                 if (!thumbnailUrl.isNullOrEmpty()) {
                     AsyncImage(
                         model = thumbnailUrl,
-                        contentDescription = "Album Art",
+                        contentDescription = stringResource(R.string.carmode_album_art),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
@@ -137,7 +139,7 @@ fun CarModeScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = uiState.currentTrack?.title ?: "Kein Titel",
+                    text = uiState.currentTrack?.title ?: stringResource(R.string.carmode_no_title),
                     style = MaterialTheme.typography.headlineMedium,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold,
@@ -204,7 +206,7 @@ fun CarModeScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.SkipPrevious,
-                        contentDescription = "Vorheriger",
+                        contentDescription = stringResource(R.string.carmode_previous),
                         tint = TextPrimary,
                         modifier = Modifier.size(40.dp)
                     )
@@ -228,7 +230,7 @@ fun CarModeScreen(
                     } else {
                         Icon(
                             imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (uiState.isPlaying) "Pause" else "Play",
+                            contentDescription = stringResource(if (uiState.isPlaying) R.string.carmode_pause else R.string.carmode_play),
                             tint = OnPrimary,
                             modifier = Modifier.size(54.dp)
                         )
@@ -246,7 +248,7 @@ fun CarModeScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.SkipNext,
-                        contentDescription = "Nachster",
+                        contentDescription = stringResource(R.string.carmode_next),
                         tint = TextPrimary,
                         modifier = Modifier.size(40.dp)
                     )
@@ -255,7 +257,7 @@ fun CarModeScreen(
 
             // Swipe hint
             Text(
-                text = "Wischen fur nachsten / vorherigen Song",
+                text = stringResource(R.string.carmode_swipe_hint),
                 style = MaterialTheme.typography.labelSmall,
                 color = TextTertiary,
                 textAlign = TextAlign.Center

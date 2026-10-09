@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.Log
+import com.yunemusic.R
 import com.yunemusic.data.local.dao.DownloadDao
 import com.yunemusic.data.local.dao.PlayEventDao
 import com.yunemusic.data.local.dao.PlaylistDao
@@ -83,7 +84,7 @@ class MusicRepositoryImpl @Inject constructor(
         streamingCache.completeUrl(videoId, quality)?.let { return Result.success(it) }
         val wifiOnly = userPreferences.wifiOnly.firstOrNull() ?: false
         if (wifiOnly && !isOnWifi()) {
-            return Result.failure(Exception("Kein WLAN verfügbar. Streaming nur über WLAN."))
+            return Result.failure(Exception(context.getString(R.string.repo_wifi_required_streaming)))
         }
         return youTubeRepository.getAudioStreamUrl(videoId, quality).onSuccess {
             streamingCache.register(videoId, quality, it)
@@ -197,7 +198,7 @@ class MusicRepositoryImpl @Inject constructor(
         return when (last) {
             is DownloadState.Completed -> Result.success(last.filePath)
             is DownloadState.Failed -> Result.failure(Exception(last.error))
-            else -> Result.failure(Exception("Download nicht abgeschlossen"))
+            else -> Result.failure(Exception(context.getString(R.string.download_not_completed)))
         }
     }
 
@@ -208,19 +209,19 @@ class MusicRepositoryImpl @Inject constructor(
             // "Nur WLAN" gilt auch für Downloads, nicht nur fürs Streaming
             val wifiOnly = userPreferences.wifiOnly.firstOrNull() ?: false
             if (wifiOnly && !isOnWifi()) {
-                emit(DownloadState.Failed("Kein WLAN verfügbar. Downloads nur über WLAN."))
+                emit(DownloadState.Failed(context.getString(R.string.download_wifi_required)))
                 return@flow
             }
 
             val quality = userPreferences.audioQuality.firstOrNull() ?: 1
             val streamResult = youTubeRepository.getAudioStreamUrl(track.id, quality)
             val streamUrl = streamResult.getOrElse { error ->
-                emit(DownloadState.Failed("Stream-URL Fehler: ${error.message}"))
+                emit(DownloadState.Failed(context.getString(R.string.download_stream_url_error, error.message ?: error.javaClass.simpleName)))
                 return@flow
             }
 
             if (streamUrl.isBlank()) {
-                emit(DownloadState.Failed("Leere Stream-URL"))
+                emit(DownloadState.Failed(context.getString(R.string.download_empty_stream_url)))
                 return@flow
             }
 
@@ -252,7 +253,7 @@ class MusicRepositoryImpl @Inject constructor(
 
             val responseBody = response.body ?: run {
                 response.close()
-                emit(DownloadState.Failed("Leere Antwort vom Server"))
+                emit(DownloadState.Failed(context.getString(R.string.download_empty_response)))
                 return@flow
             }
 
@@ -285,14 +286,14 @@ class MusicRepositoryImpl @Inject constructor(
             // dauerhaft als "Completed" in der DB
             if (contentLength > 0 && totalRead < contentLength) {
                 tempFile.delete()
-                emit(DownloadState.Failed("Download unvollständig ($totalRead von $contentLength Bytes)"))
+                emit(DownloadState.Failed(context.getString(R.string.download_incomplete, totalRead, contentLength)))
                 return@flow
             }
 
             if (finalFile.exists()) finalFile.delete()
             if (!tempFile.renameTo(finalFile)) {
                 tempFile.delete()
-                emit(DownloadState.Failed("Datei konnte nicht gespeichert werden"))
+                emit(DownloadState.Failed(context.getString(R.string.download_save_failed)))
                 return@flow
             }
 

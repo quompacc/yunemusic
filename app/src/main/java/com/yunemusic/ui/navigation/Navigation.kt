@@ -1,5 +1,6 @@
 package com.yunemusic.ui.navigation
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -12,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -21,6 +23,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.yunemusic.R
 import com.yunemusic.ui.carmode.CarModeScreen
 import com.yunemusic.ui.discover.DiscoverScreen
 import com.yunemusic.ui.library.LibraryScreen
@@ -32,37 +35,37 @@ import com.yunemusic.ui.theme.*
 
 sealed class Screen(
     val route: String,
-    val label: String,
+    @StringRes val labelRes: Int,
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector
 ) {
     object Home : Screen(
         route = "home",
-        label = "Entdecken",
+        labelRes = R.string.nav_discover,
         selectedIcon = Icons.Filled.Explore,
         unselectedIcon = Icons.Outlined.Explore
     )
     object Library : Screen(
         route = "library",
-        label = "Bibliothek",
+        labelRes = R.string.nav_library,
         selectedIcon = Icons.Filled.LibraryMusic,
         unselectedIcon = Icons.Outlined.LibraryMusic
     )
     object Settings : Screen(
         route = "settings",
-        label = "Einstellungen",
+        labelRes = R.string.nav_settings,
         selectedIcon = Icons.Filled.Settings,
         unselectedIcon = Icons.Outlined.Settings
     )
     object Player : Screen(
         route = "player",
-        label = "Player",
+        labelRes = R.string.nav_player,
         selectedIcon = Icons.Filled.MusicNote,
         unselectedIcon = Icons.Outlined.MusicNote
     )
     object CarMode : Screen(
         route = "carmode",
-        label = "Car Mode",
+        labelRes = R.string.nav_car_mode,
         selectedIcon = Icons.Filled.DirectionsCar,
         unselectedIcon = Icons.Outlined.DirectionsCar
     )
@@ -118,17 +121,18 @@ fun YuneMusicNavHost(playerViewModel: PlayerViewModel = hiltViewModel()) {
                             val isSelected = currentDestination?.hierarchy?.any {
                                 it.route == screen.route
                             } == true
+                            val label = stringResource(screen.labelRes)
 
                             NavigationBarItem(
                                 icon = {
                                     Icon(
                                         imageVector = if (isSelected) screen.selectedIcon else screen.unselectedIcon,
-                                        contentDescription = screen.label
+                                        contentDescription = label
                                     )
                                 },
                                 label = {
                                     Text(
-                                        text = screen.label,
+                                        text = label,
                                         style = MaterialTheme.typography.labelSmall
                                     )
                                 },

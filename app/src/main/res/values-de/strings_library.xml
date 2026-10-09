@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Library screen -->
+    <string name="library_title">Bibliothek</string>
+    <string name="library_tab_liked">Geliked</string>
+    <string name="library_tab_history">Verlauf</string>
+    <string name="library_tab_downloads">Downloads</string>
+    <string name="library_tab_playlists">Playlists</string>
+    <string name="library_back">Zurück</string>
+    <string name="library_remove_from_playlist">Aus Playlist entfernen</string>
+    <string name="library_remove_from_library">Aus Bibliothek entfernen</string>
+    <string name="library_new_playlist_title">Neue Playlist</string>
+    <string name="library_playlist_name_placeholder">Name der Playlist</string>
+    <string name="library_create">Erstellen</string>
+    <string name="library_cancel">Abbrechen</string>
+    <string name="library_downloads_empty">Keine Downloads</string>
+    <string name="library_downloads_empty_subtitle">Lade Songs offline herunter</string>
+    <string name="library_playlist_empty">Playlist ist leer</string>
+    <string name="library_playlist_empty_subtitle">Füge Songs über die Track-Optionen hinzu</string>
+    <string name="library_no_tracks_found">Keine Tracks gefunden</string>
+    <string name="library_yt_playlist_empty_subtitle">Diese Playlist scheint leer zu sein</string>
+    <string name="library_my_playlists">Meine Playlists</string>
+    <string name="library_new">Neu</string>
+    <string name="library_no_own_playlists">Noch keine eigenen Playlists — erstelle eine mit „Neu“</string>
+    <string name="library_youtube_playlists">YouTube Playlists</string>
+    <string name="library_yt_search_placeholder">Album oder Playlist suchen...</string>
+    <string name="library_search">Suchen</string>
+    <string name="library_ok">OK</string>
+    <string name="library_yt_search_hint">Suche nach Alben oder Playlists</string>
+    <string name="library_no_results">Keine Ergebnisse</string>
+    <string name="library_no_results_subtitle">Versuche einen anderen Suchbegriff</string>
+    <string name="library_delete_playlist">Playlist löschen</string>
+    <string name="library_open">Öffnen</string>
+    <string name="library_liked_empty">Noch keine gelikten Songs</string>
+    <string name="library_liked_empty_subtitle">Like Songs um sie hier zu sehen</string>
+    <string name="library_history_empty">Noch keine Wiedergabe</string>
+    <string name="library_history_empty_subtitle">Dein Hörverlauf erscheint hier</string>
+    <string name="library_play">Abspielen</string>
+    <string name="library_shuffle">Zufällig</string>
+    <string name="library_add_to_playlist">Zur Playlist hinzufügen</string>
+    <string name="library_create_new_playlist">Neue Playlist erstellen</string>
+    <string name="library_error_search_failed">Suche fehlgeschlagen</string>
+    <string name="library_error_tracks_load_failed">Tracks konnten nicht geladen werden</string>
+    <plurals name="library_song_count">
+        <item quantity="one">%1$d Song</item>
+        <item quantity="other">%1$d Songs</item>
+    </plurals>
+    <plurals name="library_songs_offline_count">
+        <item quantity="one">%1$d Song offline verfügbar</item>
+        <item quantity="other">%1$d Songs offline verfügbar</item>
+    </plurals>
+
+    <!-- Track options sheet -->
+    <string name="options_play_now">Jetzt abspielen</string>
+    <string name="options_play_next">Als Nächstes abspielen</string>
+    <string name="options_add_to_queue">Zur Warteschlange</string>
+    <string name="options_add_to_playlist">Zur Playlist hinzufügen</string>
+    <string name="options_add_to_library">Zur Bibliothek hinzufügen</string>
+    <string name="options_remove_download">Download entfernen</string>
+    <string name="options_download_offline">Offline herunterladen</string>
+
+    <!-- Navigation -->
+    <string name="nav_discover">Entdecken</string>
+    <string name="nav_library">Bibliothek</string>
+    <string name="nav_settings">Einstellungen</string>
+    <string name="nav_player">Player</string>
+    <string name="nav_car_mode">Car Mode</string>
+
+    <!-- Car mode -->
+    <string name="carmode_exit">Car Mode beenden</string>
+    <string name="carmode_title">Car Mode</string>
+    <string name="carmode_album_art">Album Art</string>
+    <string name="carmode_no_title">Kein Titel</string>
+    <string name="carmode_previous">Vorheriger</string>
+    <string name="carmode_next">Nächster</string>
+    <string name="carmode_pause">Pause</string>
+    <string name="carmode_play">Play</string>
+    <string name="carmode_swipe_hint">Wischen für nächsten / vorherigen Song</string>
+</resources>

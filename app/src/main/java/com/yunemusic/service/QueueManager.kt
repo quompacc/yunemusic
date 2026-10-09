@@ -1,6 +1,8 @@
 package com.yunemusic.service
 
+import android.content.Context
 import android.util.Log
+import com.yunemusic.R
 import com.yunemusic.domain.model.PlayEvent
 import com.yunemusic.domain.model.RepeatMode
 import com.yunemusic.domain.model.Track
@@ -27,6 +29,7 @@ import java.net.UnknownHostException
  * Notification-Buttons).
  */
 class QueueManager(
+    private val context: Context,
     private val scope: CoroutineScope,
     private val repository: MusicRepository,
     private val playTrackUseCase: PlayTrackUseCase,
@@ -285,7 +288,7 @@ class QueueManager(
                     val nextIndex = (_currentIndex.value + 1).coerceAtMost(newQueue.size - 1)
                     playFromQueue(nextIndex)
                 } else {
-                    _error.value = "Keine weiteren Titel gefunden"
+                    _error.value = context.getString(R.string.error_no_more_tracks)
                 }
             } finally {
                 _isLoadingRadio.value = false
@@ -328,16 +331,16 @@ class QueueManager(
         val chain = generateSequence(error) { it.cause }.toList()
         return when {
             chain.any { it is UnknownHostException || it is SocketTimeoutException } ->
-                "Keine Internetverbindung"
+                context.getString(R.string.error_no_internet)
             chain.any { it is ReCaptchaException } ->
-                "YouTube blockiert vorübergehend Anfragen — bitte später erneut versuchen"
+                context.getString(R.string.error_youtube_rate_limited)
             chain.any { it is ContentNotAvailableException } ->
-                "Video nicht verfügbar"
+                context.getString(R.string.error_video_unavailable)
             chain.any { it is ExtractionException } ->
-                "YouTube-Abruf fehlgeschlagen — vermutlich hat YouTube etwas geändert (App-Update nötig)"
+                context.getString(R.string.error_youtube_extraction)
             chain.any { it is IOException } ->
-                "Netzwerkfehler — bitte Verbindung prüfen"
-            else -> error.message ?: "Wiedergabe fehlgeschlagen"
+                context.getString(R.string.error_network)
+            else -> error.message ?: context.getString(R.string.error_playback_failed)
         }.also { Log.w(TAG, "Playback error: ${error.message}", error) }
     }
 }

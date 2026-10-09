@@ -1,0 +1,30 @@
+# Vorlage für den Merge Request in https://gitlab.com/fdroid/fdroiddata
+# (Datei dort als metadata/io.github.quompacc.yunemusic.yml anlegen)
+AntiFeatures:
+  NonFreeNet:
+    en-US: Depends on YouTube for all content.
+Categories:
+  - Multimedia
+License: GPL-3.0-or-later
+AuthorName: Eduard
+SourceCode: https://github.com/quompacc/yunemusic
+IssueTracker: https://github.com/quompacc/yunemusic/issues
+Changelog: https://github.com/quompacc/yunemusic/releases
+
+AutoName: YuneMusic
+
+RepoType: git
+Repo: https://github.com/quompacc/yunemusic.git
+
+Builds:
+  - versionName: 1.5.3
+    versionCode: 14
+    commit: v1.5.3
+    subdir: app
+    gradle:
+      - yes
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 1.5.3
+CurrentVersionCode: 14

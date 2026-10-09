@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_reset_dialog_title">Reset taste profile?</string>
+    <string name="settings_reset_dialog_text">All listening preferences will be deleted. This can\'t be undone.</string>
+    <string name="settings_reset_confirm">Reset</string>
+    <string name="settings_cancel">Cancel</string>
+    <string name="settings_prefetch_title">Preload for dead zones</string>
+    <string name="settings_prefetch_desc">Up to 5 minutes of buffer and 256 MB of audio cache. Preloads the next 2 tracks when shuffle is off. May use extra mobile data; respects “Wi-Fi only”.</string>
+    <string name="settings_section_audio">Audio</string>
+    <string name="settings_audio_quality">Audio quality</string>
+    <string name="settings_quality_low">Low (~128 kbps)</string>
+    <string name="settings_quality_medium">Medium (~256 kbps)</string>
+    <string name="settings_quality_high">High (best quality)</string>
+    <string name="settings_loudness_limiter_title">Volume limiter</string>
+    <string name="settings_loudness_limiter_desc">Prevents distortion at maximum volume</string>
+    <string name="settings_duck_title">Lower volume for notifications</string>
+    <string name="settings_duck_desc">Music briefly gets quieter when messages arrive. Requires notification access.</string>
+    <string name="settings_section_network">Network</string>
+    <string name="settings_wifi_only_title">Wi-Fi only</string>
+    <string name="settings_wifi_only_desc">Only allow streaming over Wi-Fi</string>
+    <string name="settings_section_car_mode">Car Mode</string>
+    <string name="settings_car_mode_activation">Activation</string>
+    <string name="settings_car_mode_manual">Manual</string>
+    <string name="settings_car_mode_bluetooth">Bluetooth</string>
+    <string name="settings_open_car_mode">Open Car Mode</string>
+    <string name="settings_section_profile">Profile</string>
+    <string name="settings_taste_profile">Taste profile</string>
+    <string name="settings_taste_profile_desc">Your listening preferences are learned automatically from what you play.</string>
+    <string name="settings_reset_taste_profile">Reset taste profile</string>
+    <string name="settings_taste_profile_reset_done">Taste profile has been reset</string>
+
+    <!-- Discover -->
+    <string name="discover_greeting_morning">Good morning</string>
+    <string name="discover_greeting_day">Good afternoon</string>
+    <string name="discover_greeting_evening">Good evening</string>
+    <string name="discover_greeting_night">Good night</string>
+    <string name="discover_add_to_library">Add to library</string>
+    <string name="discover_search">Search</string>
+    <string name="discover_search_placeholder">Search for songs, artists…</string>
+    <string name="discover_no_results">No results for “%1$s”</string>
+    <string name="discover_no_results_hint">Try a different search term</string>
+    <string name="discover_search_results">Search results</string>
+    <string name="discover_personalization_hint">Listen to more music – your algorithm learns your style</string>
+    <string name="discover_for_you">For you</string>
+    <string name="discover_explore">Discover</string>
+    <string name="discover_based_on_taste">Based on your taste</string>
+    <string name="discover_recently_played">Recently played</string>
+    <string name="discover_genre_mix">%1$s Mix</string>
+    <string name="discover_trending">Trending</string>
+    <string name="discover_session_no_data">Like or play a few songs first. They\'ll shape your personal session.</string>
+    <string name="discover_session_failed">Couldn\'t create your session. Please try again.</string>
+    <string name="discover_error_no_internet">No internet connection</string>
+    <string name="discover_error_recaptcha">YouTube is temporarily blocking requests — try again later</string>
+    <string name="discover_error_unavailable">Video unavailable</string>
+    <string name="discover_error_extraction">Couldn\'t fetch from YouTube — YouTube probably changed something (app update needed)</string>
+    <string name="discover_error_generic">Something went wrong</string>
+    <string name="discover_room_label">YOUR LISTENING ROOM</string>
+    <string name="discover_room_headline">Search less.\nListen deeper.</string>
+    <string name="discover_room_loading">Finding fresh songs for you…</string>
+    <string name="discover_room_description">New discoveries and familiar favorites. Inspired by your likes and listening history.</string>
+    <string name="discover_session_building">Creating session</string>
+    <string name="discover_session_start">Start session</string>
+
+    <!-- Player -->
+    <string name="player_back">Back</string>
+    <string name="player_now_playing">Now playing</string>
+    <string name="player_queue">Queue</string>
+    <string name="player_album_art">Album art</string>
+    <string name="player_no_title">No title</string>
+    <string name="player_like">Like</string>
+    <string name="player_unlike">Unlike</string>
+    <string name="player_cancel">Cancel</string>
+    <string name="player_remove_download">Remove download</string>
+    <string name="player_download">Download</string>
+    <string name="player_rewind_30">Back 30 seconds</string>
+    <string name="player_forward_30">Forward 30 seconds</string>
+    <string name="player_shuffle">Shuffle</string>
+    <string name="player_previous">Previous</string>
+    <string name="player_play">Play</string>
+    <string name="player_pause">Pause</string>
+    <string name="player_next">Next</string>
+    <string name="player_repeat">Repeat</string>
+    <string name="player_dismiss">Dismiss</string>
+    <string name="player_download_already_running">A download is already in progress</string>
+    <string name="player_download_resolving_url">Resolving URL…</string>
+    <string name="player_download_resolving_stream">Resolving stream URL…</string>
+    <string name="player_download_progress_percent">Downloading: %1$d%%</string>
+    <string name="player_download_progress_mb">Downloading: %1$.1f MB</string>
+    <string name="player_download_failed">Download failed: %1$s</string>
+
+    <!-- Queue -->
+    <string name="queue_title">Queue</string>
+    <plurals name="queue_song_count">
+        <item quantity="one">%1$d song</item>
+        <item quantity="other">%1$d songs</item>
+    </plurals>
+    <string name="queue_empty">Queue is empty</string>
+    <string name="queue_remove">Remove</string>
+</resources>

@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.yunemusic.R
 import com.yunemusic.ui.theme.*
 
 @Composable
@@ -80,20 +82,20 @@ fun PlayerScreen(
                 IconButton(onClick = onNavigateBack) {
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Back",
+                        contentDescription = stringResource(R.string.player_back),
                         tint = TextPrimary,
                         modifier = Modifier.size(32.dp)
                     )
                 }
                 Text(
-                    text = "Wird abgespielt",
+                    text = stringResource(R.string.player_now_playing),
                     style = MaterialTheme.typography.labelLarge,
                     color = TextSecondary
                 )
                 IconButton(onClick = onQueueClick) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.QueueMusic,
-                        contentDescription = "Queue",
+                        contentDescription = stringResource(R.string.player_queue),
                         tint = TextSecondary
                     )
                 }
@@ -119,7 +121,7 @@ fun PlayerScreen(
                 if (uiState.currentTrack?.thumbnailUrl?.isNotEmpty() == true) {
                     AsyncImage(
                         model = uiState.currentTrack?.thumbnailUrl,
-                        contentDescription = "Album Art",
+                        contentDescription = stringResource(R.string.player_album_art),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
@@ -145,7 +147,7 @@ fun PlayerScreen(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = uiState.currentTrack?.title ?: "Kein Titel",
+                        text = uiState.currentTrack?.title ?: stringResource(R.string.player_no_title),
                         style = MaterialTheme.typography.titleLarge,
                         color = TextPrimary,
                         fontWeight = FontWeight.Bold,
@@ -168,7 +170,8 @@ fun PlayerScreen(
                 ) {
                     Icon(
                         imageVector = if (uiState.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = if (uiState.isLiked) "Unlike" else "Like",
+                        contentDescription = if (uiState.isLiked) stringResource(R.string.player_unlike)
+                            else stringResource(R.string.player_like),
                         tint = if (uiState.isLiked) LikeRed else TextSecondary,
                         modifier = Modifier.size(26.dp)
                     )
@@ -197,7 +200,7 @@ fun PlayerScreen(
                                 )
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Abbrechen",
+                                    contentDescription = stringResource(R.string.player_cancel),
                                     tint = TextPrimary,
                                     modifier = Modifier.size(12.dp)
                                 )
@@ -205,7 +208,8 @@ fun PlayerScreen(
                         } else {
                             Icon(
                                 imageVector = if (uiState.isDownloaded) Icons.Default.DownloadDone else Icons.Default.Download,
-                                contentDescription = if (uiState.isDownloaded) "Download entfernen" else "Download",
+                                contentDescription = if (uiState.isDownloaded) stringResource(R.string.player_remove_download)
+                                    else stringResource(R.string.player_download),
                                 tint = if (uiState.isDownloaded) SignalOrange else TextSecondary,
                                 modifier = Modifier.size(26.dp)
                             )
@@ -282,7 +286,7 @@ fun PlayerScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Replay30,
-                                contentDescription = "30 Sekunden zurück",
+                                contentDescription = stringResource(R.string.player_rewind_30),
                                 tint = TextSecondary,
                                 modifier = Modifier.size(26.dp)
                             )
@@ -294,7 +298,7 @@ fun PlayerScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Forward30,
-                                contentDescription = "30 Sekunden vor",
+                                contentDescription = stringResource(R.string.player_forward_30),
                                 tint = TextSecondary,
                                 modifier = Modifier.size(26.dp)
                             )
@@ -323,7 +327,7 @@ fun PlayerScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Shuffle,
-                        contentDescription = "Shuffle",
+                        contentDescription = stringResource(R.string.player_shuffle),
                         tint = if (uiState.isShuffleEnabled) SignalOrange else TextTertiary,
                         modifier = Modifier.size(24.dp)
                     )
@@ -335,7 +339,7 @@ fun PlayerScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.SkipPrevious,
-                        contentDescription = "Previous",
+                        contentDescription = stringResource(R.string.player_previous),
                         tint = TextPrimary,
                         modifier = Modifier.size(36.dp)
                     )
@@ -353,7 +357,8 @@ fun PlayerScreen(
                     } else {
                         Icon(
                             imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (uiState.isPlaying) "Pause" else "Play",
+                            contentDescription = if (uiState.isPlaying) stringResource(R.string.player_pause)
+                                else stringResource(R.string.player_play),
                             tint = OnPrimary,
                             modifier = Modifier.size(40.dp)
                         )
@@ -366,7 +371,7 @@ fun PlayerScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.SkipNext,
-                        contentDescription = "Next",
+                        contentDescription = stringResource(R.string.player_next),
                         tint = TextPrimary,
                         modifier = Modifier.size(36.dp)
                     )
@@ -382,7 +387,7 @@ fun PlayerScreen(
                             RepeatMode.ONE -> Icons.Default.RepeatOne
                             else -> Icons.Default.Repeat
                         },
-                        contentDescription = "Repeat",
+                        contentDescription = stringResource(R.string.player_repeat),
                         tint = if (uiState.repeatMode != RepeatMode.OFF) SignalOrange else TextTertiary,
                         modifier = Modifier.size(24.dp)
                     )
@@ -421,7 +426,7 @@ fun PlayerScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Dismiss",
+                                contentDescription = stringResource(R.string.player_dismiss),
                                 tint = ErrorRed,
                                 modifier = Modifier.size(16.dp)
                             )

@@ -12,10 +12,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.yunemusic.R
 import com.yunemusic.domain.model.Track
 import com.yunemusic.ui.theme.*
 
@@ -99,7 +101,7 @@ fun MiniPlayer(
             IconButton(onClick = onSkipNext) {
                 Icon(
                     Icons.Default.SkipNext,
-                    contentDescription = "Nächster Track",
+                    contentDescription = stringResource(R.string.player_next),
                     tint = TextSecondary,
                     modifier = Modifier.size(24.dp)
                 )
@@ -116,7 +118,8 @@ fun MiniPlayer(
                 } else {
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Abspielen",
+                        contentDescription = if (isPlaying) stringResource(R.string.player_pause)
+                            else stringResource(R.string.player_play),
                         tint = SignalLight,
                         modifier = Modifier.size(30.dp)
                     )

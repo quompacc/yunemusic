@@ -1,6 +1,9 @@
 package com.yunemusic.data.youtube
 
+import android.content.Context
 import android.util.Log
+import com.yunemusic.R
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.yunemusic.domain.model.Track
 import com.yunemusic.domain.model.YouTubePlaylist
 import kotlinx.coroutines.Dispatchers
@@ -14,7 +17,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class YouTubeRepository @Inject constructor() {
+class YouTubeRepository @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
 
     companion object {
         private const val TAG = "YouTubeRepository"
@@ -65,7 +70,7 @@ class YouTubeRepository @Inject constructor() {
             val streams = streamInfo.audioStreams
 
             val best = selectBestStream(streams, qualityIndex)
-                ?: error("No audio stream found for $videoId")
+                ?: error(context.getString(R.string.error_no_audio_stream))
 
             Log.d(TAG, "Selected stream: format=${best.format?.name}, " +
                     "bitrate=${best.averageBitrate}bps, deliveryMethod=${best.deliveryMethod}")

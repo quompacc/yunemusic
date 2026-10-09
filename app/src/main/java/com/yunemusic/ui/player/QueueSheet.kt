@@ -16,11 +16,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.yunemusic.R
 import com.yunemusic.domain.model.Track
 import com.yunemusic.ui.theme.*
 
@@ -47,13 +50,13 @@ fun QueueSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Warteschlange",
+                    text = stringResource(R.string.queue_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${queue.size} Songs",
+                    text = pluralStringResource(R.plurals.queue_song_count, queue.size, queue.size),
                     style = MaterialTheme.typography.labelSmall,
                     color = TextTertiary
                 )
@@ -67,7 +70,7 @@ fun QueueSheet(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Warteschlange ist leer",
+                        text = stringResource(R.string.queue_empty),
                         color = TextTertiary,
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -140,7 +143,7 @@ fun QueueSheet(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Entfernen",
+                                    contentDescription = stringResource(R.string.queue_remove),
                                     tint = TextTertiary,
                                     modifier = Modifier.size(16.dp)
                                 )

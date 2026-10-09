@@ -19,6 +19,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -29,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.yunemusic.R
 import com.yunemusic.domain.model.Playlist
 import com.yunemusic.domain.model.Track
 import com.yunemusic.domain.model.YouTubePlaylist
@@ -84,7 +87,9 @@ fun LibraryScreen(
                 isLiked -> null
                 else -> null
             },
-            libraryActionLabel = if (isInPlaylist) "Aus Playlist entfernen" else "Aus Bibliothek entfernen"
+            libraryActionLabel = stringResource(
+                if (isInPlaylist) R.string.library_remove_from_playlist else R.string.library_remove_from_library
+            )
         )
     }
 
@@ -110,12 +115,12 @@ fun LibraryScreen(
         AlertDialog(
             onDismissRequest = { showCreatePlaylistDialog = false },
             containerColor = SurfaceDark,
-            title = { Text("Neue Playlist", color = TextPrimary) },
+            title = { Text(stringResource(R.string.library_new_playlist_title), color = TextPrimary) },
             text = {
                 OutlinedTextField(
                     value = newPlaylistName,
                     onValueChange = { newPlaylistName = it },
-                    placeholder = { Text("Name der Playlist", color = TextTertiary) },
+                    placeholder = { Text(stringResource(R.string.library_playlist_name_placeholder), color = TextTertiary) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = SignalOrange,
                         unfocusedBorderColor = OutlineDark,
@@ -136,18 +141,23 @@ fun LibraryScreen(
                     },
                     enabled = newPlaylistName.isNotBlank()
                 ) {
-                    Text("Erstellen", color = SignalLight)
+                    Text(stringResource(R.string.library_create), color = SignalLight)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showCreatePlaylistDialog = false }) {
-                    Text("Abbrechen", color = TextSecondary)
+                    Text(stringResource(R.string.library_cancel), color = TextSecondary)
                 }
             }
         )
     }
 
-    val tabs = listOf("Geliked", "Verlauf", "Downloads", "Playlists")
+    val tabs = listOf(
+        stringResource(R.string.library_tab_liked),
+        stringResource(R.string.library_tab_history),
+        stringResource(R.string.library_tab_downloads),
+        stringResource(R.string.library_tab_playlists)
+    )
 
     Column(
         modifier = Modifier
@@ -159,7 +169,7 @@ fun LibraryScreen(
                 if (uiState.ytSelectedPlaylist != null) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { viewModel.deselectYouTubePlaylist() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zur\u00fcck", tint = TextPrimary)
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.library_back), tint = TextPrimary)
                         }
                         Text(
                             text = uiState.ytSelectedPlaylist!!.title,
@@ -173,7 +183,7 @@ fun LibraryScreen(
                 } else if (uiState.selectedPlaylist != null) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { viewModel.deselectPlaylist() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zur\u00fcck", tint = TextPrimary)
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.library_back), tint = TextPrimary)
                         }
                         Text(
                             text = uiState.selectedPlaylist!!.name,
@@ -184,7 +194,7 @@ fun LibraryScreen(
                     }
                 } else {
                     Text(
-                        text = "Bibliothek",
+                        text = stringResource(R.string.library_title),
                         style = MaterialTheme.typography.headlineSmall,
                         color = TextPrimary,
                         fontWeight = FontWeight.Bold
@@ -281,15 +291,14 @@ private fun DownloadsTab(
     if (tracks.isEmpty()) {
         EmptyState(
             icon = Icons.Default.Download,
-            message = "Keine Downloads",
-            subtitle = "Lade Songs offline herunter"
+            message = stringResource(R.string.library_downloads_empty),
+            subtitle = stringResource(R.string.library_downloads_empty_subtitle)
         )
     } else {
         LazyColumn(contentPadding = PaddingValues(bottom = 80.dp)) {
             item {
                 PlayAllHeader(
-                    count = tracks.size,
-                    label = "Songs offline verf\u00fcgbar",
+                    countText = pluralStringResource(R.plurals.library_songs_offline_count, tracks.size, tracks.size),
                     onPlayAll = { onPlayAll(tracks) },
                     onShuffleAll = { onShuffleAll(tracks) }
                 )
@@ -323,15 +332,14 @@ private fun PlaylistsTab(
         if (uiState.selectedPlaylistTracks.isEmpty()) {
             EmptyState(
                 icon = Icons.Default.MusicNote,
-                message = "Playlist ist leer",
-                subtitle = "Fuege Songs ueber die Track-Optionen hinzu"
+                message = stringResource(R.string.library_playlist_empty),
+                subtitle = stringResource(R.string.library_playlist_empty_subtitle)
             )
         } else {
             LazyColumn(contentPadding = PaddingValues(bottom = 80.dp)) {
                 item {
                     PlayAllHeader(
-                        count = uiState.selectedPlaylistTracks.size,
-                        label = "Songs",
+                        countText = pluralStringResource(R.plurals.library_song_count, uiState.selectedPlaylistTracks.size, uiState.selectedPlaylistTracks.size),
                         onPlayAll = { onPlayAll(uiState.selectedPlaylistTracks) },
                         onShuffleAll = { onShuffleAll(uiState.selectedPlaylistTracks) }
                     )
@@ -361,15 +369,14 @@ private fun PlaylistsTab(
         } else if (uiState.ytPlaylistTracks.isEmpty()) {
             EmptyState(
                 icon = Icons.Default.MusicNote,
-                message = "Keine Tracks gefunden",
-                subtitle = "Diese Playlist scheint leer zu sein"
+                message = stringResource(R.string.library_no_tracks_found),
+                subtitle = stringResource(R.string.library_yt_playlist_empty_subtitle)
             )
         } else {
             LazyColumn(contentPadding = PaddingValues(bottom = 80.dp)) {
                 item {
                     PlayAllHeader(
-                        count = uiState.ytPlaylistTracks.size,
-                        label = "Songs",
+                        countText = pluralStringResource(R.plurals.library_song_count, uiState.ytPlaylistTracks.size, uiState.ytPlaylistTracks.size),
                         onPlayAll = { onPlayAll(uiState.ytPlaylistTracks) },
                         onShuffleAll = { onShuffleAll(uiState.ytPlaylistTracks) }
                     )
@@ -402,7 +409,7 @@ private fun PlaylistsTab(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Meine Playlists",
+                    text = stringResource(R.string.library_my_playlists),
                     style = MaterialTheme.typography.titleMedium,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
@@ -410,14 +417,14 @@ private fun PlaylistsTab(
                 TextButton(onClick = onCreatePlaylist) {
                     Icon(Icons.Default.Add, contentDescription = null, tint = SignalLight, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Neu", color = SignalLight, style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.library_new), color = SignalLight, style = MaterialTheme.typography.labelLarge)
                 }
             }
         }
         if (uiState.playlists.isEmpty()) {
             item {
                 Text(
-                    text = "Noch keine eigenen Playlists — erstelle eine mit „Neu“",
+                    text = stringResource(R.string.library_no_own_playlists),
                     style = MaterialTheme.typography.bodySmall,
                     color = TextTertiary,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -436,7 +443,7 @@ private fun PlaylistsTab(
         // ── YouTube Playlists ───────────────────────────────────────────
         item {
             Text(
-                text = "YouTube Playlists",
+                text = stringResource(R.string.library_youtube_playlists),
                 style = MaterialTheme.typography.titleMedium,
                 color = TextPrimary,
                 fontWeight = FontWeight.Bold,
@@ -449,14 +456,14 @@ private fun PlaylistsTab(
             OutlinedTextField(
                 value = uiState.ytSearchQuery,
                 onValueChange = { viewModel.updateYtSearchQuery(it) },
-                placeholder = { Text("Album oder Playlist suchen...", color = TextTertiary) },
+                placeholder = { Text(stringResource(R.string.library_yt_search_placeholder), color = TextTertiary) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextTertiary) },
                 trailingIcon = {
                     if (uiState.ytSearchQuery.isNotBlank()) {
                         IconButton(onClick = {
                             viewModel.searchYouTubePlaylists()
                         }) {
-                            Icon(Icons.Default.Search, contentDescription = "Suchen", tint = SignalLight)
+                            Icon(Icons.Default.Search, contentDescription = stringResource(R.string.library_search), tint = SignalLight)
                         }
                     }
                 },
@@ -488,11 +495,18 @@ private fun PlaylistsTab(
                     contentColor = MaterialTheme.colorScheme.onErrorContainer,
                     action = {
                         TextButton(onClick = { viewModel.clearYtError() }) {
-                            Text("OK")
+                            Text(stringResource(R.string.library_ok))
                         }
                     }
                 ) {
-                    Text(error, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        text = when (error) {
+                            is LibraryMessage.Text -> error.text
+                            is LibraryMessage.Resource -> stringResource(error.resId)
+                        },
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }
@@ -514,14 +528,14 @@ private fun PlaylistsTab(
                 if (uiState.ytSearchQuery.isBlank()) {
                     InlineEmptyState(
                         icon = Icons.AutoMirrored.Filled.PlaylistPlay,
-                        message = "YouTube Playlists",
-                        subtitle = "Suche nach Alben oder Playlists"
+                        message = stringResource(R.string.library_youtube_playlists),
+                        subtitle = stringResource(R.string.library_yt_search_hint)
                     )
                 } else {
                     InlineEmptyState(
                         icon = Icons.Default.SearchOff,
-                        message = "Keine Ergebnisse",
-                        subtitle = "Versuche einen anderen Suchbegriff"
+                        message = stringResource(R.string.library_no_results),
+                        subtitle = stringResource(R.string.library_no_results_subtitle)
                     )
                 }
             }
@@ -574,7 +588,7 @@ private fun LocalPlaylistItem(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "${playlist.trackCount} Songs",
+                text = pluralStringResource(R.plurals.library_song_count, playlist.trackCount, playlist.trackCount),
                 style = MaterialTheme.typography.bodySmall,
                 color = TextTertiary
             )
@@ -582,7 +596,7 @@ private fun LocalPlaylistItem(
         IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
             Icon(
                 imageVector = Icons.Default.Delete,
-                contentDescription = "Playlist löschen",
+                contentDescription = stringResource(R.string.library_delete_playlist),
                 tint = TextTertiary,
                 modifier = Modifier.size(20.dp)
             )
@@ -678,14 +692,14 @@ private fun YouTubePlaylistItem(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "${playlist.trackCount} Songs",
+                text = pluralStringResource(R.plurals.library_song_count, playlist.trackCount, playlist.trackCount),
                 style = MaterialTheme.typography.labelSmall,
                 color = TextTertiary
             )
         }
         Icon(
             imageVector = Icons.AutoMirrored.Filled.PlaylistPlay,
-            contentDescription = "\u00d6ffnen",
+            contentDescription = stringResource(R.string.library_open),
             tint = SignalLight,
             modifier = Modifier.size(24.dp)
         )
@@ -705,15 +719,14 @@ private fun LikedSongsTab(
     if (tracks.isEmpty()) {
         EmptyState(
             icon = Icons.Default.FavoriteBorder,
-            message = "Noch keine gelikten Songs",
-            subtitle = "Like Songs um sie hier zu sehen"
+            message = stringResource(R.string.library_liked_empty),
+            subtitle = stringResource(R.string.library_liked_empty_subtitle)
         )
     } else {
         LazyColumn(contentPadding = PaddingValues(bottom = 80.dp)) {
             item {
                 PlayAllHeader(
-                    count = tracks.size,
-                    label = "Songs",
+                    countText = pluralStringResource(R.plurals.library_song_count, tracks.size, tracks.size),
                     onPlayAll = { onPlayAll(tracks) },
                     onShuffleAll = { onShuffleAll(tracks) }
                 )
@@ -741,15 +754,14 @@ private fun HistoryTab(
     if (tracks.isEmpty()) {
         EmptyState(
             icon = Icons.Default.History,
-            message = "Noch keine Wiedergabe",
-            subtitle = "Dein Hoerverlauf erscheint hier"
+            message = stringResource(R.string.library_history_empty),
+            subtitle = stringResource(R.string.library_history_empty_subtitle)
         )
     } else {
         LazyColumn(contentPadding = PaddingValues(bottom = 80.dp)) {
             item {
                 PlayAllHeader(
-                    count = tracks.size,
-                    label = "Songs",
+                    countText = pluralStringResource(R.plurals.library_song_count, tracks.size, tracks.size),
                     onPlayAll = { onPlayAll(tracks) },
                     onShuffleAll = { onShuffleAll(tracks) }
                 )
@@ -768,14 +780,13 @@ private fun HistoryTab(
 
 @Composable
 private fun PlayAllHeader(
-    count: Int,
-    label: String,
+    countText: String,
     onPlayAll: () -> Unit,
     onShuffleAll: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         Text(
-            text = "$count $label",
+            text = countText,
             style = MaterialTheme.typography.bodySmall,
             color = TextTertiary
         )
@@ -788,7 +799,7 @@ private fun PlayAllHeader(
             ) {
                 Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Abspielen")
+                Text(stringResource(R.string.library_play))
             }
             OutlinedButton(
                 onClick = onShuffleAll,
@@ -798,7 +809,7 @@ private fun PlayAllHeader(
             ) {
                 Icon(Icons.Default.Shuffle, null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Zufaellig")
+                Text(stringResource(R.string.library_shuffle))
             }
         }
     }
@@ -860,7 +871,7 @@ private fun PlaylistPickerSheet(
                 .padding(bottom = 32.dp)
         ) {
             Text(
-                text = "Zur Playlist hinzufuegen",
+                text = stringResource(R.string.library_add_to_playlist),
                 style = MaterialTheme.typography.titleMedium,
                 color = TextPrimary,
                 fontWeight = FontWeight.SemiBold,
@@ -878,7 +889,7 @@ private fun PlaylistPickerSheet(
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, tint = SignalLight, modifier = Modifier.size(22.dp))
                 Spacer(modifier = Modifier.width(16.dp))
-                Text("Neue Playlist erstellen", style = MaterialTheme.typography.bodyMedium, color = SignalLight)
+                Text(stringResource(R.string.library_create_new_playlist), style = MaterialTheme.typography.bodyMedium, color = SignalLight)
             }
 
             playlists.forEach { playlist ->
@@ -893,7 +904,7 @@ private fun PlaylistPickerSheet(
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
                         Text(playlist.name, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
-                        Text("${playlist.trackCount} Songs", style = MaterialTheme.typography.bodySmall, color = TextTertiary)
+                        Text(pluralStringResource(R.plurals.library_song_count, playlist.trackCount, playlist.trackCount), style = MaterialTheme.typography.bodySmall, color = TextTertiary)
                     }
                 }
             }

@@ -1,0 +1,4 @@
+- English translation (German remains available)
+- First F-Droid compatible release
+- NewPipe Extractor pinned to v0.26.5
+- Licensed under GPL-3.0-or-later

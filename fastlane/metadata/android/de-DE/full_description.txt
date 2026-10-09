@@ -1,0 +1,18 @@
+<p>YuneMusic ist ein schlanker Musikplayer, der Musik von YouTube ohne Google-Konto und ohne API-Key streamt. Alle Daten werden über den quelloffenen <a href="https://github.com/TeamNewPipe/NewPipeExtractor">NewPipe Extractor</a> abgerufen.</p>
+
+<p><b>Funktionen</b></p>
+<ul>
+<li>Hintergrundwiedergabe mit Benachrichtigung und Medientasten</li>
+<li>Funkloch-Puffer: bis zu fünf Minuten und die nächsten zwei Titel vorladen, 256 MB automatisch verwalteter Audiocache („Nur WLAN“ wird berücksichtigt)</li>
+<li>Android Auto mit Browse-Kategorien (Geliked, Verlauf, Warteschlange)</li>
+<li>Lokales Geschmacksprofil aus Hörverlauf, Likes und Skips – berechnet ausschließlich auf dem Gerät</li>
+<li>Persönliche Sessions und Smart Radio für endlose Wiedergabe verwandter Titel</li>
+<li>Shuffle, Repeat und vollständige Warteschlangenverwaltung inkl. Drag-to-reorder</li>
+<li>Bibliothek mit gelikten Songs, Verlauf und Downloads</li>
+<li>Vereinfachter Car Mode</li>
+</ul>
+
+<p><b>Datenschutz</b></p>
+<p>Likes, Verlauf und Geschmacksprofil werden nur lokal gespeichert. Suche, Streaming und Cover-Abrufe gehen an YouTube und dessen Auslieferungsdienste, die dabei deine IP-Adresse sehen.</p>
+
+<p>YuneMusic steht in keiner Verbindung zu YouTube oder Google.</p>

@@ -1,7 +1,9 @@
 package com.yunemusic.ui.library
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.yunemusic.R
 import com.yunemusic.domain.model.Playlist
 import com.yunemusic.domain.model.Track
 import com.yunemusic.domain.model.YouTubePlaylist
@@ -11,6 +13,15 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+/** User-visible message: either raw text (e.g. an exception message) or a string resource. */
+sealed interface LibraryMessage {
+    data class Text(val text: String) : LibraryMessage
+    data class Resource(@StringRes val resId: Int) : LibraryMessage
+}
+
+private fun Throwable.toLibraryMessage(@StringRes fallback: Int): LibraryMessage =
+    message?.let { LibraryMessage.Text(it) } ?: LibraryMessage.Resource(fallback)
 
 data class LibraryUiState(
     val likedTracks: List<Track> = emptyList(),
@@ -27,7 +38,7 @@ data class LibraryUiState(
     val ytPlaylistTracks: List<Track> = emptyList(),
     val ytIsSearching: Boolean = false,
     val ytIsLoadingTracks: Boolean = false,
-    val ytError: String? = null
+    val ytError: LibraryMessage? = null
 )
 
 @HiltViewModel
@@ -141,7 +152,7 @@ class LibraryViewModel @Inject constructor(
                     _uiState.update { it.copy(ytSearchResults = playlists, ytIsSearching = false) }
                 }
                 .onFailure { error ->
-                    _uiState.update { it.copy(ytIsSearching = false, ytError = error.message ?: "Suche fehlgeschlagen") }
+                    _uiState.update { it.copy(ytIsSearching = false, ytError = error.toLibraryMessage(R.string.library_error_search_failed)) }
                 }
         }
     }
@@ -154,7 +165,7 @@ class LibraryViewModel @Inject constructor(
                     _uiState.update { it.copy(ytPlaylistTracks = tracks, ytIsLoadingTracks = false) }
                 }
                 .onFailure { error ->
-                    _uiState.update { it.copy(ytIsLoadingTracks = false, ytError = error.message ?: "Tracks konnten nicht geladen werden") }
+                    _uiState.update { it.copy(ytIsLoadingTracks = false, ytError = error.toLibraryMessage(R.string.library_error_tracks_load_failed)) }
                 }
         }
     }

@@ -120,6 +120,7 @@ class MusicService : MediaBrowserServiceCompat() {
     override fun onCreate() {
         super.onCreate()
         queueManager = QueueManager(
+            context = applicationContext,
             scope = serviceScope,
             repository = repository,
             playTrackUseCase = playTrackUseCase,
@@ -460,10 +461,10 @@ class MusicService : MediaBrowserServiceCompat() {
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "YuneMusic Playback",
+            getString(R.string.service_channel_name),
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = "Music playback controls"
+            description = getString(R.string.service_channel_description)
             setShowBadge(false)
         }
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
@@ -507,13 +508,13 @@ class MusicService : MediaBrowserServiceCompat() {
             .setContentTitle(track?.title ?: "YuneMusic")
             .setContentText(track?.channelName ?: "")
             .setContentIntent(contentIntent)
-            .addAction(R.drawable.ic_skip_previous, "Previous", prevIntent)
+            .addAction(R.drawable.ic_skip_previous, getString(R.string.service_action_previous), prevIntent)
             .addAction(
                 if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play,
-                if (isPlaying) "Pause" else "Play",
+                getString(if (isPlaying) R.string.service_action_pause else R.string.service_action_play),
                 playPauseIntent
             )
-            .addAction(R.drawable.ic_skip_next, "Next", nextIntent)
+            .addAction(R.drawable.ic_skip_next, getString(R.string.service_action_next), nextIntent)
             .setStyle(
                 androidx.media.app.NotificationCompat.MediaStyle()
                     .setMediaSession(mediaSession.sessionToken)
@@ -593,10 +594,12 @@ class MusicService : MediaBrowserServiceCompat() {
                 when (parentId) {
                     MEDIA_ROOT_ID -> {
                         // Root: show category tiles in Auto
-                        items += browsableItem(BROWSE_RECENT, "Zuletzt gehört", "Zuletzt gespielte Tracks")
-                        items += browsableItem(BROWSE_LIKED,  "Geliked",        "Deine Lieblingstracks")
+                        items += browsableItem(BROWSE_RECENT, getString(R.string.auto_recent_title), getString(R.string.auto_recent_subtitle))
+                        items += browsableItem(BROWSE_LIKED, getString(R.string.auto_liked_title), getString(R.string.auto_liked_subtitle))
                         if (queueManager.queue.value.isNotEmpty()) {
-                            items += browsableItem(BROWSE_QUEUE, "Warteschlange", "${queueManager.queue.value.size} Tracks")
+                            items += browsableItem(BROWSE_QUEUE, getString(R.string.auto_queue_title), queueManager.queue.value.size.let { n ->
+                                resources.getQuantityString(R.plurals.auto_queue_track_count, n, n)
+                            })
                         }
                     }
                     BROWSE_RECENT -> {

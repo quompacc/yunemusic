@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.yunemusic.R
@@ -26,19 +27,19 @@ fun ListeningRoom(isLoading: Boolean, error: String?, onPlay: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("DEIN HÖRRAUM", modifier = Modifier.weight(1f),
+            Text(stringResource(R.string.discover_room_label), modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.labelMedium,
                 fontFamily = FontFamily.Monospace, color = DarkBackground)
             Icon(painterResource(R.drawable.ic_launcher_monochrome), null,
                 modifier = Modifier.size(48.dp).background(DarkBackground, RoundedCornerShape(12.dp)),
                 tint = TextPrimary)
         }
-        Text("Weniger suchen.\nMehr versinken.",
+        Text(stringResource(R.string.discover_room_headline),
             style = MaterialTheme.typography.displaySmall,
             fontFamily = FontFamily.Serif, color = DarkBackground)
         Text(
-            error ?: if (isLoading) "Passende neue Songs werden für dich gesucht …"
-                else "Neue Entdeckungen und vertraute Favoriten. Inspiriert von deinen Likes und deinem Hörverlauf.",
+            error ?: if (isLoading) stringResource(R.string.discover_room_loading)
+                else stringResource(R.string.discover_room_description),
             style = MaterialTheme.typography.bodyMedium, color = Color(0xFF50584B)
         )
         Button(
@@ -49,7 +50,9 @@ fun ListeningRoom(isLoading: Boolean, error: String?, onPlay: () -> Unit) {
             colors = ButtonDefaults.buttonColors(containerColor = DarkBackground, contentColor = TextPrimary,
                 disabledContainerColor = Color(0xFFD8D8CB), disabledContentColor = Color(0xFF50584B))
         ) {
-            Text(if (isLoading) "Session wird erstellt" else "Session starten",
+            Text(
+                if (isLoading) stringResource(R.string.discover_session_building)
+                else stringResource(R.string.discover_session_start),
                 modifier = Modifier.weight(1f))
             Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = SignalOrange)
         }

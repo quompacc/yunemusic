@@ -1,7 +1,9 @@
 package com.yunemusic.ui.settings
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.yunemusic.R
 import com.yunemusic.data.preferences.UserPreferences
 import com.yunemusic.service.TasteAnalyzer
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,7 +18,7 @@ data class SettingsUiState(
     val carModeTrigger: String = "manual",
     val loudnessLimiter: Boolean = true,
     val duckOnNotification: Boolean = true,
-    val message: String? = null,
+    @StringRes val message: Int? = null,
     val isError: Boolean = false
 )
 
@@ -95,11 +97,11 @@ class SettingsViewModel @Inject constructor(
     fun resetTasteProfile() {
         viewModelScope.launch {
             tasteAnalyzer.resetProfile()
-            showMessage("Taste Profile wurde zurückgesetzt")
+            showMessage(R.string.settings_taste_profile_reset_done)
         }
     }
 
-    private fun showMessage(message: String, isError: Boolean = false) {
+    private fun showMessage(@StringRes message: Int, isError: Boolean = false) {
         _uiState.update { it.copy(message = message, isError = isError) }
         viewModelScope.launch {
             kotlinx.coroutines.delay(3000)

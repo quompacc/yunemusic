@@ -25,12 +25,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.yunemusic.R
 import com.yunemusic.domain.model.Track
 import com.yunemusic.ui.components.TrackOptionsSheet
 import com.yunemusic.ui.theme.*
@@ -55,15 +57,16 @@ fun DiscoverScreen(
     var showSearch by remember { mutableStateOf(false) }
 
 
-    val greeting = remember {
+    val greetingRes = remember {
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         when (hour) {
-            in 5..11 -> "Guten Morgen"
-            in 12..17 -> "Guten Tag"
-            in 18..21 -> "Guten Abend"
-            else -> "Gute Nacht"
+            in 5..11 -> R.string.discover_greeting_morning
+            in 12..17 -> R.string.discover_greeting_day
+            in 18..21 -> R.string.discover_greeting_evening
+            else -> R.string.discover_greeting_night
         }
     }
+    val greeting = stringResource(greetingRes)
 
     trackWithOptions?.let { track ->
         TrackOptionsSheet(
@@ -73,7 +76,7 @@ fun DiscoverScreen(
             onPlayNext = { onPlayNext(track) },
             onAddToQueue = { onAddToQueue(track) },
             onLibraryToggle = { onAddToLibrary(track) },
-            libraryActionLabel = "Zur Bibliothek hinzufügen",
+            libraryActionLabel = stringResource(R.string.discover_add_to_library),
             onDownloadToggle = { onDownload(track) }
         )
     }
@@ -111,7 +114,7 @@ fun DiscoverScreen(
             ) {
                 Icon(
                     imageVector = if (showSearch) Icons.Default.Close else Icons.Default.Search,
-                    contentDescription = "Suche",
+                    contentDescription = stringResource(R.string.discover_search),
                     tint = TextPrimary,
                     modifier = Modifier.size(20.dp)
                 )
@@ -129,7 +132,7 @@ fun DiscoverScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp),
-                placeholder = { Text("Suche nach Songs, Artists...", color = TextTertiary) },
+                placeholder = { Text(stringResource(R.string.discover_search_placeholder), color = TextTertiary) },
                 leadingIcon = { Icon(Icons.Default.Search, null, tint = TextSecondary) },
                 trailingIcon = {
                     if (uiState.searchQuery.isNotEmpty()) {
@@ -162,7 +165,7 @@ fun DiscoverScreen(
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     ListeningRoom(
                         isLoading = uiState.isBuildingSession,
-                        error = uiState.sessionError,
+                        error = uiState.sessionError?.let { stringResource(it) },
                         onPlay = { viewModel.startSession(onPlayAll) }
                     )
                 }
@@ -212,7 +215,7 @@ fun DiscoverScreen(
                             Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Warning, null, tint = ErrorRed)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(uiState.error!!, color = ErrorRed, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                                Text(stringResource(uiState.error!!), color = ErrorRed, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                                 IconButton(onClick = { viewModel.clearError() }) {
                                     Icon(Icons.Default.Close, null, tint = ErrorRed)
                                 }
@@ -236,13 +239,13 @@ fun DiscoverScreen(
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = "Keine Ergebnisse für „${uiState.searchQuery}“",
+                                text = stringResource(R.string.discover_no_results, uiState.searchQuery),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = TextSecondary
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Versuche einen anderen Suchbegriff",
+                                text = stringResource(R.string.discover_no_results_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TextTertiary
                             )
@@ -250,7 +253,7 @@ fun DiscoverScreen(
                     }
                 } else {
                     item(span = { GridItemSpan(maxLineSpan) }) {
-                        SectionHeader("Suchergebnisse")
+                        SectionHeader(stringResource(R.string.discover_search_results))
                     }
                     items(
                         items = uiState.searchResults,
@@ -275,7 +278,7 @@ fun DiscoverScreen(
                                 Icon(Icons.Default.AutoAwesome, null, tint = SignalLight, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
-                                    "Hör mehr Musik – dein Algorithmus lernt deinen Stil",
+                                    stringResource(R.string.discover_personalization_hint),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = TextSecondary
                                 )
@@ -288,8 +291,9 @@ fun DiscoverScreen(
                 if (uiState.recommendations.isNotEmpty() || uiState.isLoadingRecommendations) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         SectionHeader(
-                            title = if (uiState.hasPersonalProfile) "Für dich" else "Entdecken",
-                            subtitle = if (uiState.hasPersonalProfile) "Basierend auf deinem Geschmack" else null,
+                            title = if (uiState.hasPersonalProfile) stringResource(R.string.discover_for_you)
+                                else stringResource(R.string.discover_explore),
+                            subtitle = if (uiState.hasPersonalProfile) stringResource(R.string.discover_based_on_taste) else null,
                             onPlay = if (uiState.recommendations.isNotEmpty()) ({ onPlayAll(uiState.recommendations) }) else null,
                             onShuffle = if (uiState.recommendations.isNotEmpty()) ({ onShuffleAll(uiState.recommendations) }) else null
                         )
@@ -311,7 +315,7 @@ fun DiscoverScreen(
                 if (uiState.recentTracks.isNotEmpty()) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         SectionHeader(
-                            title = "Zuletzt gehört",
+                            title = stringResource(R.string.discover_recently_played),
                             onPlay = { onPlayAll(uiState.recentTracks) },
                             onShuffle = { onShuffleAll(uiState.recentTracks) }
                         )
@@ -329,7 +333,7 @@ fun DiscoverScreen(
                 for (mix in uiState.smartMixes) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         SectionHeader(
-                            title = "${mix.emoji} ${mix.label}",
+                            title = "${mix.emoji} ${stringResource(R.string.discover_genre_mix, mix.genre)}",
                             onPlay = { onPlayAll(mix.tracks) },
                             onShuffle = { onShuffleAll(mix.tracks) }
                         )
@@ -347,7 +351,7 @@ fun DiscoverScreen(
                 if (uiState.trendingTracks.isNotEmpty() || uiState.isLoadingTrending) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         SectionHeader(
-                            title = "Trending",
+                            title = stringResource(R.string.discover_trending),
                             onPlay = if (uiState.trendingTracks.isNotEmpty()) ({ onPlayAll(uiState.trendingTracks) }) else null,
                             onShuffle = if (uiState.trendingTracks.isNotEmpty()) ({ onShuffleAll(uiState.trendingTracks) }) else null
                         )
@@ -372,7 +376,7 @@ fun DiscoverScreen(
                             Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Warning, null, tint = ErrorRed)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(error, color = ErrorRed, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                                Text(stringResource(error), color = ErrorRed, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                                 IconButton(onClick = { viewModel.clearError() }) {
                                     Icon(Icons.Default.Close, null, tint = ErrorRed)
                                 }

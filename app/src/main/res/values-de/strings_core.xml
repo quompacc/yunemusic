@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Repository / Streaming -->
+    <string name="repo_wifi_required_streaming">Kein WLAN verfügbar. Streaming nur über WLAN.</string>
+
+    <!-- Downloads -->
+    <string name="download_wifi_required">Kein WLAN verfügbar. Downloads nur über WLAN.</string>
+    <string name="download_not_completed">Download nicht abgeschlossen</string>
+    <string name="download_stream_url_error">Stream-URL Fehler: %1$s</string>
+    <string name="download_empty_stream_url">Leere Stream-URL</string>
+    <string name="download_empty_response">Leere Antwort vom Server</string>
+    <string name="download_incomplete">Download unvollständig (%1$d von %2$d Bytes)</string>
+    <string name="download_save_failed">Datei konnte nicht gespeichert werden</string>
+
+    <!-- Wiedergabe- / YouTube-Fehler -->
+    <string name="error_no_audio_stream">Kein Audio-Stream gefunden</string>
+    <string name="error_no_more_tracks">Keine weiteren Titel gefunden</string>
+    <string name="error_no_internet">Keine Internetverbindung</string>
+    <string name="error_youtube_rate_limited">YouTube blockiert vorübergehend Anfragen — bitte später erneut versuchen</string>
+    <string name="error_video_unavailable">Video nicht verfügbar</string>
+    <string name="error_youtube_extraction">YouTube-Abruf fehlgeschlagen — vermutlich hat YouTube etwas geändert (App-Update nötig)</string>
+    <string name="error_network">Netzwerkfehler — bitte Verbindung prüfen</string>
+    <string name="error_playback_failed">Wiedergabe fehlgeschlagen</string>
+
+    <!-- Wiedergabe-Service / Benachrichtigung -->
+    <string name="service_channel_name">YuneMusic-Wiedergabe</string>
+    <string name="service_channel_description">Steuerung der Musikwiedergabe</string>
+    <string name="service_action_previous">Zurück</string>
+    <string name="service_action_pause">Pause</string>
+    <string name="service_action_play">Abspielen</string>
+    <string name="service_action_next">Weiter</string>
+
+    <!-- Android Auto -->
+    <string name="auto_recent_title">Zuletzt gehört</string>
+    <string name="auto_recent_subtitle">Zuletzt gespielte Tracks</string>
+    <string name="auto_liked_title">Geliked</string>
+    <string name="auto_liked_subtitle">Deine Lieblingstracks</string>
+    <string name="auto_queue_title">Warteschlange</string>
+    <plurals name="auto_queue_track_count">
+        <item quantity="one">%1$d Track</item>
+        <item quantity="other">%1$d Tracks</item>
+    </plurals>
+</resources>

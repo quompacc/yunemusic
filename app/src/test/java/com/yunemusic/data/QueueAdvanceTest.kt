@@ -1,5 +1,6 @@
 package com.yunemusic.data
 
+import org.robolectric.RuntimeEnvironment
 import com.yunemusic.domain.model.*
 import com.yunemusic.domain.repository.MusicRepository
 import com.yunemusic.domain.usecase.PlayTrackUseCase
@@ -8,8 +9,13 @@ import com.yunemusic.service.TasteAnalyzer
 import kotlinx.coroutines.*
 import org.junit.Assert.*
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.lang.reflect.Proxy
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28], application = android.app.Application::class)
 class QueueAdvanceTest {
     private class Repository : MusicRepository by (Proxy.newProxyInstance(
         MusicRepository::class.java.classLoader, arrayOf(MusicRepository::class.java)
@@ -36,7 +42,7 @@ class QueueAdvanceTest {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
         val repo = Repository()
         val player = Player()
-        val manager = QueueManager(scope, repo, PlayTrackUseCase(repo), TasteAnalyzer(repo), player)
+        val manager = QueueManager(RuntimeEnvironment.getApplication(), scope, repo, PlayTrackUseCase(repo), TasteAnalyzer(repo), player)
         try { test(manager, player) } finally { scope.cancel() }
     }
     private val tracks = listOf("one", "two", "three").map { Track(it, it, "Artist", "", 100) }

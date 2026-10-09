@@ -19,12 +19,12 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.yunemusic"
+        applicationId = "io.github.quompacc.yunemusic"
         minSdk = 26
         targetSdk = 34
         // CI (Gitea Actions) setzt -PciVersionCode/-PciVersionName pro Build
-        versionCode = (project.findProperty("ciVersionCode") as? String)?.toIntOrNull() ?: 13
-        versionName = (project.findProperty("ciVersionName") as? String) ?: "1.5.2"
+        versionCode = (project.findProperty("ciVersionCode") as? String)?.toIntOrNull() ?: 14
+        versionName = (project.findProperty("ciVersionName") as? String) ?: "1.5.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -32,13 +32,19 @@ android {
         }
     }
 
+    // Umgebungsvariablen (CI) haben Vorrang vor local.properties (lokal).
+    // Ohne Keystore (z. B. F-Droid-Buildserver) wird die Release-APK unsigniert gebaut.
+    val keystoreFile = rootProject.file(System.getenv("KEYSTORE_FILE") ?: localProps["KEYSTORE_FILE"] as? String ?: "yunemusic.jks")
+    val hasKeystore  = keystoreFile.exists()
+
     signingConfigs {
-        create("release") {
-            // Umgebungsvariablen (CI) haben Vorrang vor local.properties (lokal)
-            storeFile     = rootProject.file(System.getenv("KEYSTORE_FILE") ?: localProps["KEYSTORE_FILE"] as? String ?: "yunemusic.jks")
-            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: localProps["KEYSTORE_PASSWORD"] as? String ?: ""
-            keyAlias      = System.getenv("KEY_ALIAS")         ?: localProps["KEY_ALIAS"]          as? String ?: ""
-            keyPassword   = System.getenv("KEY_PASSWORD")      ?: localProps["KEY_PASSWORD"]       as? String ?: ""
+        if (hasKeystore) {
+            create("release") {
+                storeFile     = keystoreFile
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: localProps["KEYSTORE_PASSWORD"] as? String ?: ""
+                keyAlias      = System.getenv("KEY_ALIAS")         ?: localProps["KEY_ALIAS"]          as? String ?: ""
+                keyPassword   = System.getenv("KEY_PASSWORD")      ?: localProps["KEY_PASSWORD"]       as? String ?: ""
+            }
         }
     }
 
@@ -46,7 +52,7 @@ android {
         release {
             isMinifyEnabled   = true
             isShrinkResources = true
-            signingConfig     = signingConfigs.getByName("release")
+            if (hasKeystore) signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -126,8 +132,13 @@ dependencies {
     implementation("androidx.media:media:1.7.0")
 
     // NewPipe Extractor (YouTube anonym, kein API-Key)
-    // dev-SNAPSHOT für aktuelle YouTube-Kompatibilität; URLEncoder-Crash via coreLibraryDesugaring behoben
-    implementation("com.github.TeamNewPipe:NewPipeExtractor:dev-SNAPSHOT") { isChanging = true }
+    // Fest gepinnt für reproduzierbare Builds (F-Droid). Health-Check/Hotfix gegen den
+    // neuesten Stand: ./gradlew -PnewpipeVersion=dev-SNAPSHOT --refresh-dependencies ...
+    // URLEncoder-Crash via coreLibraryDesugaring behoben
+    val newpipeVersion = (project.findProperty("newpipeVersion") as? String) ?: "v0.26.5"
+    implementation("com.github.TeamNewPipe:NewPipeExtractor:$newpipeVersion") {
+        isChanging = newpipeVersion.endsWith("SNAPSHOT")
+    }
     implementation("org.mozilla:rhino:1.8.1")
 
     // OkHttp (HTTP-Client für NewPipe)

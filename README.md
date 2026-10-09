@@ -14,6 +14,7 @@ Werbefreier YouTube-Musikplayer für Android. Kein API-Key, kein Google-Login �
 - **Shuffle / Repeat / Queue-Management** — vollständige Warteschlangenverwaltung inkl. Drag-to-reorder
 - **Bibliothek** — Gelikte Songs, Hörverlauf
 - **Car Mode** — vereinfachtes Vollbild-UI für die Nutzung im Auto
+- **Sprachen** — Englisch (Standard) und Deutsch; ab Android 13 pro App umschaltbar
 
 ## Tech Stack
 
@@ -21,7 +22,7 @@ Werbefreier YouTube-Musikplayer für Android. Kein API-Key, kein Google-Login �
 |---|---|
 | UI | Jetpack Compose, Material3, Dark Theme (OLED) |
 | Wiedergabe | ExoPlayer (Media3) |
-| YouTube-Daten | NewPipe Extractor (dev-SNAPSHOT via JitPack) |
+| YouTube-Daten | NewPipe Extractor (fest gepinnte Release via JitPack) |
 | HTTP | OkHttp 4 |
 | Datenbank | Room |
 | Einstellungen | DataStore |
@@ -67,18 +68,33 @@ app/src/main/java/com/yunemusic/
 ## Build
 
 ```bash
-git clone https://gitea.hl.home.arpa/eduard/yunemusic-app.git
-cd yunemusic-app
+git clone https://github.com/quompacc/yunemusic.git
+cd yunemusic
 ./gradlew assembleDebug
 ```
 
 `local.properties` wird nicht versioniert — Android Studio legt die Datei beim ersten Öffnen automatisch an.
 
+Ohne Keystore (`yunemusic.jks` bzw. `KEYSTORE_FILE`) baut `./gradlew assembleRelease` eine
+unsignierte Release-APK — so baut auch F-Droid.
+
+### NewPipe-Version
+
+Der Extractor ist in [`app/build.gradle.kts`](app/build.gradle.kts) auf ein Release-Tag gepinnt
+(reproduzierbare Builds, Voraussetzung für F-Droid). Gegen den neuesten Entwicklungsstand bauen:
+
+```bash
+./gradlew -PnewpipeVersion=dev-SNAPSHOT --refresh-dependencies assembleRelease
+```
+
+Sobald TeamNewPipe ein neues Release veröffentlicht, die Standardversion in
+`app/build.gradle.kts` anheben, `versionCode`/`versionName` erhöhen und ein Tag `vX.Y.Z` setzen.
+
 ## Automatische NewPipe-Updates (CI)
 
 YouTube ändert alle paar Wochen seine interne API — dann bricht der einkompilierte
 NewPipe Extractor und die installierte APK spielt nichts mehr ab, bis mit dem
-neuesten `dev-SNAPSHOT` neu gebaut wird. Das übernimmt
+neuesten `dev-SNAPSHOT` neu gebaut wird. Das übernimmt (mit `-PnewpipeVersion=dev-SNAPSHOT`)
 [`.gitea/workflows/newpipe-healthcheck.yml`](.gitea/workflows/newpipe-healthcheck.yml):
 
 1. **Täglich um 04:17 UTC**: Smoke-Test ([`NewPipeSmokeTest`](app/src/test/java/com/yunemusic/smoke/NewPipeSmokeTest.kt))
@@ -101,8 +117,10 @@ neuesten `dev-SNAPSHOT` neu gebaut wird. Das übernimmt
    als Quelle die Gitea-Release-URL des Repos eintragen — dann meldet sich das
    Handy von selbst, sobald eine neue Nightly-APK bereitliegt.
 
-Das Workflow-Format ist GitHub-kompatibel: für GitHub Actions die Datei einfach
-nach `.github/workflows/` kopieren.
+Auf GitHub übernehmen das [`.github/workflows/newpipe-healthcheck.yml`](.github/workflows/newpipe-healthcheck.yml)
+(Nightly) und [`.github/workflows/release.yml`](.github/workflows/release.yml): Jedes Tag `vX.Y.Z`
+erzeugt ein signiertes GitHub-Release mit dem Fastlane-Changelog als Release-Text.
+Die Secrets sind dieselben (Settings → Secrets and variables → Actions).
 
 ## Android Auto
 
@@ -124,4 +142,8 @@ Tracks können direkt aus Auto heraus abgespielt werden. Sprachbefehle ("Hey Goo
 
 ## Lizenz
 
-Privates Projekt.
+YuneMusic ist freie Software unter der [GNU General Public License v3.0 oder später](LICENSE)
+(`GPL-3.0-or-later`). Der verwendete [NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor)
+steht ebenfalls unter GPLv3.
+
+YuneMusic ist kein offizielles Produkt von YouTube oder Google und steht in keiner Verbindung zu ihnen.

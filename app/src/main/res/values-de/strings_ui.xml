@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings -->
+    <string name="settings_title">Einstellungen</string>
+    <string name="settings_reset_dialog_title">Taste Profile zurücksetzen?</string>
+    <string name="settings_reset_dialog_text">Alle Hörpräferenzen werden gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.</string>
+    <string name="settings_reset_confirm">Zurücksetzen</string>
+    <string name="settings_cancel">Abbrechen</string>
+    <string name="settings_prefetch_title">Für Funklöcher vorladen</string>
+    <string name="settings_prefetch_desc">Bis zu 5 Minuten Puffer und 256 MB Audiocache. Lädt ohne Shuffle die nächsten 2 Titel vor. Kann zusätzliche mobile Daten verbrauchen; berücksichtigt „Nur WLAN“.</string>
+    <string name="settings_section_audio">Audio</string>
+    <string name="settings_audio_quality">Audio-Qualität</string>
+    <string name="settings_quality_low">Niedrig (~128 kbps)</string>
+    <string name="settings_quality_medium">Mittel (~256 kbps)</string>
+    <string name="settings_quality_high">Hoch (Beste Qualität)</string>
+    <string name="settings_loudness_limiter_title">Lautstärke-Begrenzer</string>
+    <string name="settings_loudness_limiter_desc">Verhindert Verzerrung bei maximaler Lautstärke</string>
+    <string name="settings_duck_title">Bei Benachrichtigungen leiser</string>
+    <string name="settings_duck_desc">Musik wird kurz leiser, wenn Nachrichten eintreffen. Benötigt Benachrichtigungszugriff.</string>
+    <string name="settings_section_network">Netzwerk</string>
+    <string name="settings_wifi_only_title">Nur WLAN</string>
+    <string name="settings_wifi_only_desc">Streaming nur über WLAN erlauben</string>
+    <string name="settings_section_car_mode">Car Mode</string>
+    <string name="settings_car_mode_activation">Aktivierung</string>
+    <string name="settings_car_mode_manual">Manuell</string>
+    <string name="settings_car_mode_bluetooth">Bluetooth</string>
+    <string name="settings_open_car_mode">Car Mode öffnen</string>
+    <string name="settings_section_profile">Profil</string>
+    <string name="settings_taste_profile">Taste Profile</string>
+    <string name="settings_taste_profile_desc">Deine Hörpräferenzen werden automatisch aus deiner Wiedergabe gelernt.</string>
+    <string name="settings_reset_taste_profile">Taste Profile zurücksetzen</string>
+    <string name="settings_taste_profile_reset_done">Taste Profile wurde zurückgesetzt</string>
+
+    <!-- Discover -->
+    <string name="discover_greeting_morning">Guten Morgen</string>
+    <string name="discover_greeting_day">Guten Tag</string>
+    <string name="discover_greeting_evening">Guten Abend</string>
+    <string name="discover_greeting_night">Gute Nacht</string>
+    <string name="discover_add_to_library">Zur Bibliothek hinzufügen</string>
+    <string name="discover_search">Suche</string>
+    <string name="discover_search_placeholder">Suche nach Songs, Artists...</string>
+    <string name="discover_no_results">Keine Ergebnisse für „%1$s“</string>
+    <string name="discover_no_results_hint">Versuche einen anderen Suchbegriff</string>
+    <string name="discover_search_results">Suchergebnisse</string>
+    <string name="discover_personalization_hint">Hör mehr Musik – dein Algorithmus lernt deinen Stil</string>
+    <string name="discover_for_you">Für dich</string>
+    <string name="discover_explore">Entdecken</string>
+    <string name="discover_based_on_taste">Basierend auf deinem Geschmack</string>
+    <string name="discover_recently_played">Zuletzt gehört</string>
+    <string name="discover_genre_mix">%1$s Mix</string>
+    <string name="discover_trending">Trending</string>
+    <string name="discover_session_no_data">Like oder höre erst einige Songs. Daraus entsteht deine persönliche Session.</string>
+    <string name="discover_session_failed">Deine Session konnte nicht erstellt werden. Bitte erneut versuchen.</string>
+    <string name="discover_error_no_internet">Keine Internetverbindung</string>
+    <string name="discover_error_recaptcha">YouTube blockiert vorübergehend Anfragen — später erneut versuchen</string>
+    <string name="discover_error_unavailable">Video nicht verfügbar</string>
+    <string name="discover_error_extraction">YouTube-Abruf fehlgeschlagen — vermutlich hat YouTube etwas geändert (App-Update nötig)</string>
+    <string name="discover_error_generic">Ein Fehler ist aufgetreten</string>
+    <string name="discover_room_label">DEIN HÖRRAUM</string>
+    <string name="discover_room_headline">Weniger suchen.\nMehr versinken.</string>
+    <string name="discover_room_loading">Passende neue Songs werden für dich gesucht …</string>
+    <string name="discover_room_description">Neue Entdeckungen und vertraute Favoriten. Inspiriert von deinen Likes und deinem Hörverlauf.</string>
+    <string name="discover_session_building">Session wird erstellt</string>
+    <string name="discover_session_start">Session starten</string>
+
+    <!-- Player -->
+    <string name="player_back">Zurück</string>
+    <string name="player_now_playing">Wird abgespielt</string>
+    <string name="player_queue">Warteschlange</string>
+    <string name="player_album_art">Albumcover</string>
+    <string name="player_no_title">Kein Titel</string>
+    <string name="player_like">Gefällt mir</string>
+    <string name="player_unlike">Gefällt mir nicht mehr</string>
+    <string name="player_cancel">Abbrechen</string>
+    <string name="player_remove_download">Download entfernen</string>
+    <string name="player_download">Download</string>
+    <string name="player_rewind_30">30 Sekunden zurück</string>
+    <string name="player_forward_30">30 Sekunden vor</string>
+    <string name="player_shuffle">Shuffle</string>
+    <string name="player_previous">Vorheriger Track</string>
+    <string name="player_play">Abspielen</string>
+    <string name="player_pause">Pause</string>
+    <string name="player_next">Nächster Track</string>
+    <string name="player_repeat">Wiederholen</string>
+    <string name="player_dismiss">Schließen</string>
+    <string name="player_download_already_running">Es läuft bereits ein Download</string>
+    <string name="player_download_resolving_url">URL wird ermittelt...</string>
+    <string name="player_download_resolving_stream">Stream-URL wird ermittelt...</string>
+    <string name="player_download_progress_percent">Download: %1$d%%</string>
+    <string name="player_download_progress_mb">Download: %1$.1f MB</string>
+    <string name="player_download_failed">Download fehlgeschlagen: %1$s</string>
+
+    <!-- Queue -->
+    <string name="queue_title">Warteschlange</string>
+    <plurals name="queue_song_count">
+        <item quantity="one">%1$d Song</item>
+        <item quantity="other">%1$d Songs</item>
+    </plurals>
+    <string name="queue_empty">Warteschlange ist leer</string>
+    <string name="queue_remove">Entfernen</string>
+</resources>

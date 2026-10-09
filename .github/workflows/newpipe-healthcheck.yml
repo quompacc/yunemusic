@@ -1,0 +1,96 @@
+# NewPipe Health-Check & Nightly-Build (GitHub-Variante von .gitea/workflows/newpipe-healthcheck.yml)
+#
+# Läuft täglich gegen den NEUESTEN NewPipe dev-SNAPSHOT (-PnewpipeVersion=dev-SNAPSHOT):
+#   - Smoke-Test rot  → Issue anlegen (YouTube hat etwas geändert, Fix steht aus)
+#   - Smoke-Test grün → signierte APK als rollendes "nightly"-Release veröffentlichen
+#
+# Die F-Droid-Builds sind davon unabhängig: sie nutzen die in app/build.gradle.kts
+# gepinnte NewPipe-Version.
+#
+# Benötigte Repository-Secrets (Settings → Secrets and variables → Actions):
+#   KEYSTORE_B64       — Keystore base64-kodiert:  base64 -w0 yunemusic.jks
+#   KEYSTORE_PASSWORD  — Keystore-Passwort
+#   KEY_ALIAS          — Key-Alias
+#   KEY_PASSWORD       — Key-Passwort
+
+name: NewPipe Health-Check & Nightly
+
+on:
+  schedule:
+    - cron: '17 4 * * *'   # täglich 04:17 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  healthcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Smoke-Test mit aktuellem NewPipe dev-SNAPSHOT
+        run: |
+          chmod +x gradlew
+          ./gradlew -PnewpipeVersion=dev-SNAPSHOT --refresh-dependencies --no-daemon \
+            :app:testDebugUnitTest --tests "com.yunemusic.smoke.NewPipeSmokeTest"
+
+      - name: Issue bei Fehlschlag anlegen
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --title "NewPipe Health-Check fehlgeschlagen ($(date +%Y-%m-%d))" \
+            --body "Der tägliche Extractor-Smoke-Test ist fehlgeschlagen. Vermutlich hat YouTube etwas geändert und der NewPipe dev-SNAPSHOT enthält noch keinen Fix.
+
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+  nightly:
+    needs: healthcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Keystore aus Secret wiederherstellen
+        run: echo "${{ secrets.KEYSTORE_B64 }}" | base64 -d > yunemusic.jks
+
+      - name: Signierte APK bauen (frischer NewPipe-SNAPSHOT)
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          BASE=$(grep -oP 'ciVersionName"\) as\? String\) \?: "\K[^"]+' app/build.gradle.kts)
+          ./gradlew -PnewpipeVersion=dev-SNAPSHOT --refresh-dependencies --no-daemon \
+            -PciVersionName="${BASE}-nightly.${{ github.run_number }}" \
+            :app:assembleRelease
+          mv app/build/outputs/apk/release/app-release.apk \
+             "yunemusic-${BASE}-nightly.${{ github.run_number }}.apk"
+
+      - name: Rollendes "nightly"-Release aktualisieren
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete nightly --cleanup-tag --yes || true
+          gh release create nightly yunemusic-*-nightly.*.apk \
+            --prerelease \
+            --target "${{ github.sha }}" \
+            --title "Nightly ${{ github.run_number }}" \
+            --notes "Automatischer Build mit aktuellem NewPipe dev-SNAPSHOT. Smoke-Test gegen YouTube bestanden."

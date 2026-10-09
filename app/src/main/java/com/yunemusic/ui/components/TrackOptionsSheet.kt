@@ -16,10 +16,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.yunemusic.R
 import com.yunemusic.domain.model.Track
 import com.yunemusic.ui.theme.*
 
@@ -35,7 +37,7 @@ fun TrackOptionsSheet(
     onAddToPlaylist: (() -> Unit)? = null,
     onLibraryToggle: (() -> Unit)? = null,
     onDownloadToggle: (() -> Unit)? = null,
-    libraryActionLabel: String = "Zur Bibliothek hinzufügen"
+    libraryActionLabel: String = stringResource(R.string.options_add_to_library)
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -91,11 +93,11 @@ fun TrackOptionsSheet(
             )
             Spacer(modifier = Modifier.height(4.dp))
 
-            OptionItem(Icons.Default.PlayArrow, "Jetzt abspielen") { onPlayNow(); onDismiss() }
-            OptionItem(Icons.Default.SkipNext, "Als Nächstes abspielen") { onPlayNext(); onDismiss() }
-            OptionItem(Icons.AutoMirrored.Filled.PlaylistAdd, "Zur Warteschlange") { onAddToQueue(); onDismiss() }
+            OptionItem(Icons.Default.PlayArrow, stringResource(R.string.options_play_now)) { onPlayNow(); onDismiss() }
+            OptionItem(Icons.Default.SkipNext, stringResource(R.string.options_play_next)) { onPlayNext(); onDismiss() }
+            OptionItem(Icons.AutoMirrored.Filled.PlaylistAdd, stringResource(R.string.options_add_to_queue)) { onAddToQueue(); onDismiss() }
             if (onAddToPlaylist != null) {
-                OptionItem(Icons.AutoMirrored.Filled.PlaylistAddCheck, "Zur Playlist hinzufügen") {
+                OptionItem(Icons.AutoMirrored.Filled.PlaylistAddCheck, stringResource(R.string.options_add_to_playlist)) {
                     onDismiss(); onAddToPlaylist()
                 }
             }
@@ -106,11 +108,11 @@ fun TrackOptionsSheet(
             }
             if (onDownloadToggle != null) {
                 if (isDownloaded) {
-                    OptionItem(Icons.Default.DeleteOutline, "Download entfernen", tint = ErrorRed) {
+                    OptionItem(Icons.Default.DeleteOutline, stringResource(R.string.options_remove_download), tint = ErrorRed) {
                         onDownloadToggle(); onDismiss()
                     }
                 } else {
-                    OptionItem(Icons.Default.Download, "Offline herunterladen") {
+                    OptionItem(Icons.Default.Download, stringResource(R.string.options_download_offline)) {
                         onDownloadToggle(); onDismiss()
                     }
                 }

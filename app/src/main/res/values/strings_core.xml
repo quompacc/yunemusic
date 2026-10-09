@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Repository / streaming -->
+    <string name="repo_wifi_required_streaming">No Wi-Fi available. Streaming is limited to Wi-Fi.</string>
+
+    <!-- Downloads -->
+    <string name="download_wifi_required">No Wi-Fi available. Downloads are limited to Wi-Fi.</string>
+    <string name="download_not_completed">Download did not complete</string>
+    <string name="download_stream_url_error">Stream URL error: %1$s</string>
+    <string name="download_empty_stream_url">Empty stream URL</string>
+    <string name="download_empty_response">Empty response from server</string>
+    <string name="download_incomplete">Download incomplete (%1$d of %2$d bytes)</string>
+    <string name="download_save_failed">Couldn\'t save the file</string>
+
+    <!-- Playback / YouTube errors -->
+    <string name="error_no_audio_stream">No audio stream found</string>
+    <string name="error_no_more_tracks">No more tracks found</string>
+    <string name="error_no_internet">No internet connection</string>
+    <string name="error_youtube_rate_limited">YouTube is temporarily blocking requests — please try again later</string>
+    <string name="error_video_unavailable">Video unavailable</string>
+    <string name="error_youtube_extraction">Couldn\'t load from YouTube — YouTube probably changed something (app update required)</string>
+    <string name="error_network">Network error — please check your connection</string>
+    <string name="error_playback_failed">Playback failed</string>
+
+    <!-- Playback service / notification -->
+    <string name="service_channel_name">YuneMusic playback</string>
+    <string name="service_channel_description">Music playback controls</string>
+    <string name="service_action_previous">Previous</string>
+    <string name="service_action_pause">Pause</string>
+    <string name="service_action_play">Play</string>
+    <string name="service_action_next">Next</string>
+
+    <!-- Android Auto browse tree -->
+    <string name="auto_recent_title">Recently played</string>
+    <string name="auto_recent_subtitle">Recently played tracks</string>
+    <string name="auto_liked_title">Liked</string>
+    <string name="auto_liked_subtitle">Your favorite tracks</string>
+    <string name="auto_queue_title">Queue</string>
+    <plurals name="auto_queue_track_count">
+        <item quantity="one">%1$d track</item>
+        <item quantity="other">%1$d tracks</item>
+    </plurals>
+</resources>

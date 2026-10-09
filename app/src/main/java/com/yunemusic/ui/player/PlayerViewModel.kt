@@ -8,6 +8,7 @@ import android.os.IBinder
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.yunemusic.R
 import com.yunemusic.domain.model.DownloadState
 import com.yunemusic.domain.model.Track
 import com.yunemusic.domain.repository.MusicRepository
@@ -250,31 +251,31 @@ class PlayerViewModel @Inject constructor(
 
     fun downloadTrack(track: Track) {
         if (downloadJob?.isActive == true) {
-            _uiState.update { it.copy(error = "Es läuft bereits ein Download") }
+            _uiState.update { it.copy(error = context.getString(R.string.player_download_already_running)) }
             return
         }
         downloadingTrackId = track.id
         downloadJob = viewModelScope.launch {
             _uiState.update {
-                it.copy(isDownloading = true, downloadProgress = 0f, downloadStatus = "URL wird ermittelt...", error = null)
+                it.copy(isDownloading = true, downloadProgress = 0f, downloadStatus = context.getString(R.string.player_download_resolving_url), error = null)
             }
             Log.d(TAG, "Starte Download: ${track.title} (id=${track.id})")
 
             repository.downloadTrackWithProgress(track).collect { state ->
                 when (state) {
                     is DownloadState.GettingUrl -> {
-                        _uiState.update { it.copy(downloadStatus = "Stream-URL wird ermittelt...") }
+                        _uiState.update { it.copy(downloadStatus = context.getString(R.string.player_download_resolving_stream)) }
                     }
                     is DownloadState.Downloading -> {
-                        val pct = if (state.progress >= 0) {
-                            "${(state.progress * 100).toInt()}%"
+                        val status = if (state.progress >= 0) {
+                            context.getString(R.string.player_download_progress_percent, (state.progress * 100).toInt())
                         } else {
-                            String.format(java.util.Locale.getDefault(), "%.1f MB", state.mbDownloaded)
+                            context.getString(R.string.player_download_progress_mb, state.mbDownloaded)
                         }
                         _uiState.update {
                             it.copy(
                                 downloadProgress = state.progress.coerceAtLeast(0f),
-                                downloadStatus = "Download: $pct"
+                                downloadStatus = status
                             )
                         }
                     }
@@ -297,7 +298,7 @@ class PlayerViewModel @Inject constructor(
                             it.copy(
                                 isDownloading = false,
                                 downloadProgress = 0f, downloadStatus = "",
-                                error = "Download fehlgeschlagen: ${state.error}"
+                                error = context.getString(R.string.player_download_failed, state.error)
                             )
                         }
                     }

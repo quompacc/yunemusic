@@ -1,7 +1,9 @@
 package com.yunemusic.ui.discover
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.yunemusic.R
 import com.yunemusic.domain.model.Track
 import com.yunemusic.domain.repository.MusicRepository
 import com.yunemusic.domain.usecase.GetRecommendationsUseCase
@@ -22,14 +24,15 @@ import java.net.UnknownHostException
 import javax.inject.Inject
 
 data class SmartMix(
-    val label: String,
+    /** Genre key; the display label is formatted in the UI (R.string.discover_genre_mix). */
+    val genre: String,
     val emoji: String,
     val tracks: List<Track>
 )
 
 data class DiscoverUiState(
     val isBuildingSession: Boolean = false,
-    val sessionError: String? = null,
+    @StringRes val sessionError: Int? = null,
     val recommendations: List<Track> = emptyList(),
     val trendingTracks: List<Track> = emptyList(),
     val featuredTracks: List<Track> = emptyList(),
@@ -39,7 +42,7 @@ data class DiscoverUiState(
     val isLoadingRecommendations: Boolean = false,
     val isLoadingTrending: Boolean = false,
     val isLoadingSearch: Boolean = false,
-    val error: String? = null,
+    @StringRes val error: Int? = null,
     val searchQuery: String = "",
     val selectedCategory: String? = null,
     val isSearchActive: Boolean = false,
@@ -66,14 +69,14 @@ class DiscoverViewModel @Inject constructor(
             try {
                 val tracks = buildPersonalSession()
                 if (tracks.isEmpty()) {
-                    _uiState.update { it.copy(sessionError = "Like oder höre erst einige Songs. Daraus entsteht deine persönliche Session.") }
+                    _uiState.update { it.copy(sessionError = R.string.discover_session_no_data) }
                 } else {
                     onReady(tracks)
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _uiState.update { it.copy(sessionError = "Deine Session konnte nicht erstellt werden. Bitte erneut versuchen.") }
+                _uiState.update { it.copy(sessionError = R.string.discover_session_failed) }
             } finally {
                 _uiState.update { it.copy(isBuildingSession = false) }
             }
@@ -145,7 +148,7 @@ class DiscoverViewModel @Inject constructor(
                     if (tracks.isNotEmpty()) {
                         mixes.add(
                             SmartMix(
-                                label = "$genre Mix",
+                                genre = genre,
                                 emoji = genreEmoji(genre),
                                 tracks = tracks.take(10)
                             )
@@ -226,22 +229,23 @@ class DiscoverViewModel @Inject constructor(
     }
 
     /**
-     * Mappt technische Exceptions (inkl. Ursachenkette) auf verständliche deutsche Meldungen.
+     * Mappt technische Exceptions (inkl. Ursachenkette) auf verständliche, lokalisierte Meldungen.
      */
-    private fun mapErrorMessage(error: Throwable): String {
+    @StringRes
+    private fun mapErrorMessage(error: Throwable): Int {
         val chain = generateSequence(error) { it.cause }.take(10).toList()
         return when {
             chain.any { it is UnknownHostException || it is SocketTimeoutException } ->
-                "Keine Internetverbindung"
+                R.string.discover_error_no_internet
             chain.any { it is ReCaptchaException } ->
-                "YouTube blockiert vorübergehend Anfragen — später erneut versuchen"
+                R.string.discover_error_recaptcha
             chain.any { it is ContentNotAvailableException } ->
-                "Video nicht verfügbar"
+                R.string.discover_error_unavailable
             chain.any { it is IOException } ->
-                "Keine Internetverbindung"
+                R.string.discover_error_no_internet
             chain.any { it is ExtractionException } ->
-                "YouTube-Abruf fehlgeschlagen — vermutlich hat YouTube etwas geändert (App-Update nötig)"
-            else -> "Ein Fehler ist aufgetreten"
+                R.string.discover_error_extraction
+            else -> R.string.discover_error_generic
         }
     }
 
