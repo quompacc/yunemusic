@@ -27,6 +27,10 @@ android {
         versionName = (project.findProperty("ciVersionName") as? String) ?: "1.5.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Nur die von der App unterstützten Sprachen ausliefern (verhindert gemischte
+        // Bibliotheks-Systemtexte in anderen Sprachen und verkleinert die APK)
+        resourceConfigurations += listOf("en", "de")
         vectorDrawables {
             useSupportLibrary = true
         }
