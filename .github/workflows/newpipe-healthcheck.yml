@@ -1,11 +1,19 @@
 # NewPipe Health-Check & Nightly-Build (GitHub-Variante von .gitea/workflows/newpipe-healthcheck.yml)
 #
-# Läuft täglich gegen den NEUESTEN NewPipe dev-SNAPSHOT (-PnewpipeVersion=dev-SNAPSHOT):
-#   - Smoke-Test rot  → Issue anlegen (YouTube hat etwas geändert, Fix steht aus)
-#   - Smoke-Test grün → signierte APK als rollendes "nightly"-Release veröffentlichen
+# Läuft täglich:
+#   - resolve:   aktuellen Commit von TeamNewPipe/NewPipeExtractor@dev ermitteln und
+#                sicherstellen, dass JitPack ihn gebaut hat. Statt "dev-SNAPSHOT" wird
+#                der Commit-Hash verwendet — JitPacks dev-SNAPSHOT kann veraltet oder
+#                kaputt sein (zeigte z. B. auf dev-eb53b79e62 ohne POM).
+#                Scheitert nur JitPack, gibt es KEIN Issue (YouTube ist dann nicht schuld).
+#   - healthcheck: Rhino-Test + Smoke-Test (inkl. Abruf der dekodierten Stream-URL)
+#                gegen genau diesen Commit. Rot → Issue (bestehendes offenes wird kommentiert).
+#   - pinned:    derselbe Smoke-Test gegen die in app/build.gradle.kts gepinnte Version,
+#                also das, was Nutzer der Releases gerade installiert haben.
+#   - nightly:   nur wenn der Dev-Check grün ist: signierte APK mit GENAU dem getesteten
+#                Commit als rollendes "nightly"-Release.
 #
-# Die F-Droid-Builds sind davon unabhängig: sie nutzen die in app/build.gradle.kts
-# gepinnte NewPipe-Version.
+# Die F-Droid-/Release-Builds sind davon unabhängig: sie nutzen die gepinnte Version.
 #
 # Benötigte Repository-Secrets (Settings → Secrets and variables → Actions):
 #   KEYSTORE_B64       — Keystore base64-kodiert:  base64 -w0 yunemusic.jks
@@ -18,14 +26,54 @@ name: NewPipe Health-Check & Nightly
 on:
   schedule:
     - cron: '17 4 * * *'   # täglich 04:17 UTC
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      nightly:
+        description: 'Bei grünem Check ein Nightly-Release veröffentlichen'
+        type: boolean
+        default: true
 
 permissions:
   contents: write
   issues: write
 
+env:
+  SMOKE_TESTS: >-
+    --tests com.yunemusic.smoke.NewPipeSmokeTest
+    --tests com.yunemusic.data.RuntimeCompatibilityTest
+
 jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
+    steps:
+      - name: Aktuellen NewPipeExtractor-dev-Commit ermitteln
+        id: sha
+        run: |
+          FULL=$(git ls-remote https://github.com/TeamNewPipe/NewPipeExtractor refs/heads/dev | cut -f1)
+          [ -n "$FULL" ] || { echo "::error::dev-Branch von NewPipeExtractor nicht gefunden"; exit 1; }
+          echo "sha=${FULL::10}" >> "$GITHUB_OUTPUT"
+          echo "NewPipeExtractor dev: https://github.com/TeamNewPipe/NewPipeExtractor/commit/$FULL" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Auf JitPack-Build warten
+        env:
+          SHA: ${{ steps.sha.outputs.sha }}
+        run: |
+          BASE="https://jitpack.io/com/github/TeamNewPipe/NewPipeExtractor/$SHA"
+          # Der erste Abruf stößt den Build an; JitPack braucht dafür einige Minuten.
+          for i in $(seq 1 30); do
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' -m 120 "$BASE/NewPipeExtractor-$SHA.pom" || true)
+            echo "Versuch $i: HTTP $CODE"
+            [ "$CODE" = 200 ] && exit 0
+            sleep 30
+          done
+          echo "::error::JitPack hat NewPipeExtractor $SHA nicht bereitgestellt. Build-Log: $BASE/build.log"
+          echo "JitPack-Build für $SHA nicht verfügbar — kein YouTube-Problem. Log: $BASE/build.log" >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
   healthcheck:
+    needs: resolve
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,25 +85,54 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Smoke-Test mit aktuellem NewPipe dev-SNAPSHOT
+      - name: Smoke-Test mit NewPipeExtractor ${{ needs.resolve.outputs.sha }}
         run: |
           chmod +x gradlew
-          ./gradlew -PnewpipeVersion=dev-SNAPSHOT --refresh-dependencies --no-daemon \
-            :app:testDebugUnitTest --tests "com.yunemusic.smoke.NewPipeSmokeTest"
+          ./gradlew -PnewpipeVersion=${{ needs.resolve.outputs.sha }} --no-daemon \
+            :app:testDebugUnitTest $SMOKE_TESTS
 
-      - name: Issue bei Fehlschlag anlegen
+      - name: Issue bei Fehlschlag anlegen oder ergänzen
         if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          gh issue create \
-            --title "NewPipe Health-Check fehlgeschlagen ($(date +%Y-%m-%d))" \
-            --body "Der tägliche Extractor-Smoke-Test ist fehlgeschlagen. Vermutlich hat YouTube etwas geändert und der NewPipe dev-SNAPSHOT enthält noch keinen Fix.
+          TITLE: NewPipe Health-Check fehlgeschlagen
+          BODY: |
+            Der Smoke-Test gegen NewPipeExtractor dev (`${{ needs.resolve.outputs.sha }}`) ist fehlgeschlagen. Vermutlich hat YouTube etwas geändert und der dev-Stand enthält noch keinen Fix. Es wird kein Nightly veröffentlicht.
 
-          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: bash .github/scripts/report-issue.sh
+
+  pinned:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Smoke-Test mit gepinnter NewPipe-Version
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon :app:testDebugUnitTest $SMOKE_TESTS
+
+      - name: Issue bei Fehlschlag anlegen oder ergänzen
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: Gepinnte NewPipe-Version funktioniert nicht mehr
+          BODY: |
+            Der Smoke-Test mit der in app/build.gradle.kts gepinnten NewPipe-Version ist fehlgeschlagen. Die veröffentlichten Releases sind vermutlich betroffen (Suche oder Dekodierung der Stream-URLs).
+
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: bash .github/scripts/report-issue.sh
 
   nightly:
-    needs: healthcheck
+    needs: [resolve, healthcheck]
+    if: github.event_name == 'schedule' || inputs.nightly
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,7 +147,7 @@ jobs:
       - name: Keystore aus Secret wiederherstellen
         run: echo "${{ secrets.KEYSTORE_B64 }}" | base64 -d > yunemusic.jks
 
-      - name: Signierte APK bauen (frischer NewPipe-SNAPSHOT)
+      - name: Signierte APK bauen (getesteter NewPipe-Commit)
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
@@ -78,7 +155,7 @@ jobs:
         run: |
           chmod +x gradlew
           BASE=$(grep -oP 'ciVersionName"\) as\? String\) \?: "\K[^"]+' app/build.gradle.kts)
-          ./gradlew -PnewpipeVersion=dev-SNAPSHOT --refresh-dependencies --no-daemon \
+          ./gradlew -PnewpipeVersion=${{ needs.resolve.outputs.sha }} --no-daemon \
             -PciVersionName="${BASE}-nightly.${{ github.run_number }}" \
             :app:assembleRelease
           mv app/build/outputs/apk/release/app-release.apk \
@@ -93,4 +170,4 @@ jobs:
             --prerelease \
             --target "${{ github.sha }}" \
             --title "Nightly ${{ github.run_number }}" \
-            --notes "Automatischer Build mit aktuellem NewPipe dev-SNAPSHOT. Smoke-Test gegen YouTube bestanden."
+            --notes "Automatischer Build mit NewPipeExtractor dev \`${{ needs.resolve.outputs.sha }}\` (https://github.com/TeamNewPipe/NewPipeExtractor/commit/${{ needs.resolve.outputs.sha }}). Smoke-Test inkl. Abruf der dekodierten Stream-URL bestanden; nicht auf einem Gerät getestet."
