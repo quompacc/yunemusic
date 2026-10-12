@@ -6,7 +6,8 @@
 #                Sonst sicherstellen, dass JitPack ihn gebaut hat. Statt "dev-SNAPSHOT" wird
 #                der Commit-Hash verwendet — JitPacks dev-SNAPSHOT kann veraltet oder
 #                kaputt sein (zeigte z. B. auf dev-eb53b79e62 ohne POM).
-#                Scheitert nur JitPack, gibt es KEIN Issue (YouTube ist dann nicht schuld).
+#                Liefert JitPack nicht (z. B. HTTP 429), endet der Lauf grün mit Warnung und
+#                ohne Issue; der Dev-Check wird beim nächsten Lauf wiederholt.
 #   - healthcheck: Rhino-Test + Smoke-Test (inkl. Abruf der dekodierten Stream-URL)
 #                gegen genau diesen Commit. Rot → Issue (bestehendes offenes wird kommentiert).
 #   - pinned:    (immer) derselbe Smoke-Test gegen die in app/build.gradle.kts gepinnte Version,
@@ -53,6 +54,7 @@ jobs:
     outputs:
       sha: ${{ steps.sha.outputs.sha }}
       changed: ${{ steps.changed.outputs.changed }}
+      available: ${{ steps.jitpack.outputs.available }}
     steps:
       - name: Aktuellen NewPipeExtractor-dev-Commit ermitteln
         id: sha
@@ -78,6 +80,7 @@ jobs:
           fi
 
       - name: Auf JitPack-Build warten
+        id: jitpack
         if: steps.changed.outputs.changed == 'true'
         env:
           SHA: ${{ steps.sha.outputs.sha }}
@@ -88,18 +91,21 @@ jobs:
           for i in $(seq 1 12); do
             CODE=$(curl -s -o /dev/null -D headers.txt -w '%{http_code}' -m 120 "$BASE/NewPipeExtractor-$SHA.pom" || true)
             echo "Versuch $i: HTTP $CODE"
-            [ "$CODE" = 200 ] && exit 0
+            if [ "$CODE" = 200 ]; then
+              echo "available=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
             WAIT=$(grep -i '^retry-after:' headers.txt | tr -dc '0-9' || true)
             [ -n "$WAIT" ] && [ "$WAIT" -le 600 ] || WAIT=120
             sleep "$WAIT"
           done
-          echo "::error::JitPack hat NewPipeExtractor $SHA nicht bereitgestellt. Build-Log: $BASE/build.log"
-          echo "JitPack-Build für $SHA nicht verfügbar — kein YouTube-Problem. Log: $BASE/build.log" >> "$GITHUB_STEP_SUMMARY"
-          exit 1
+          echo "available=false" >> "$GITHUB_OUTPUT"
+          echo "::warning::JitPack hat NewPipeExtractor $SHA nicht bereitgestellt (letzte Antwort: HTTP $CODE). Dev-Check wird beim nächsten Lauf wiederholt. Build-Log: $BASE/build.log"
+          echo "JitPack-Build für $SHA nicht verfügbar (HTTP $CODE) — kein YouTube-Problem, nächster Lauf versucht es erneut. Log: $BASE/build.log" >> "$GITHUB_STEP_SUMMARY"
 
   healthcheck:
     needs: resolve
-    if: needs.resolve.outputs.changed == 'true'
+    if: needs.resolve.outputs.changed == 'true' && needs.resolve.outputs.available == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
