@@ -1,14 +1,15 @@
 # NewPipe Health-Check & Nightly-Build (GitHub-Variante von .gitea/workflows/newpipe-healthcheck.yml)
 #
-# Läuft täglich:
-#   - resolve:   aktuellen Commit von TeamNewPipe/NewPipeExtractor@dev ermitteln und
-#                sicherstellen, dass JitPack ihn gebaut hat. Statt "dev-SNAPSHOT" wird
+# Läuft täglich, weil YouTube und NewPipe sich unabhängig von diesem Repo ändern:
+#   - resolve:   aktuellen Commit von TeamNewPipe/NewPipeExtractor@dev ermitteln. Ist es
+#                derselbe wie im aktuellen Nightly, entfallen healthcheck und nightly.
+#                Sonst sicherstellen, dass JitPack ihn gebaut hat. Statt "dev-SNAPSHOT" wird
 #                der Commit-Hash verwendet — JitPacks dev-SNAPSHOT kann veraltet oder
 #                kaputt sein (zeigte z. B. auf dev-eb53b79e62 ohne POM).
 #                Scheitert nur JitPack, gibt es KEIN Issue (YouTube ist dann nicht schuld).
 #   - healthcheck: Rhino-Test + Smoke-Test (inkl. Abruf der dekodierten Stream-URL)
 #                gegen genau diesen Commit. Rot → Issue (bestehendes offenes wird kommentiert).
-#   - pinned:    derselbe Smoke-Test gegen die in app/build.gradle.kts gepinnte Version,
+#   - pinned:    (immer) derselbe Smoke-Test gegen die in app/build.gradle.kts gepinnte Version,
 #                also das, was Nutzer der Releases gerade installiert haben.
 #   - nightly:   nur wenn der Dev-Check grün ist: signierte APK mit GENAU dem getesteten
 #                Commit als rollendes "nightly"-Release.
@@ -32,6 +33,10 @@ on:
         description: 'Bei grünem Check ein Nightly-Release veröffentlichen'
         type: boolean
         default: true
+      force:
+        description: 'Dev-Check auch ausführen, wenn sich NewPipe dev nicht geändert hat'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -47,6 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       sha: ${{ steps.sha.outputs.sha }}
+      changed: ${{ steps.changed.outputs.changed }}
     steps:
       - name: Aktuellen NewPipeExtractor-dev-Commit ermitteln
         id: sha
@@ -56,7 +62,23 @@ jobs:
           echo "sha=${FULL::10}" >> "$GITHUB_OUTPUT"
           echo "NewPipeExtractor dev: https://github.com/TeamNewPipe/NewPipeExtractor/commit/$FULL" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Mit dem aktuellen Nightly vergleichen
+        id: changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.sha.outputs.sha }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          NOTES=$(gh release view nightly -R "$GITHUB_REPOSITORY" --json body --jq .body 2>/dev/null || true)
+          if [ "$FORCE" != true ] && grep -qF "\`$SHA\`" <<<"$NOTES"; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Nightly enthält bereits $SHA — Dev-Check und Nightly entfallen." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Auf JitPack-Build warten
+        if: steps.changed.outputs.changed == 'true'
         env:
           SHA: ${{ steps.sha.outputs.sha }}
         run: |
@@ -74,6 +96,7 @@ jobs:
 
   healthcheck:
     needs: resolve
+    if: needs.resolve.outputs.changed == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
