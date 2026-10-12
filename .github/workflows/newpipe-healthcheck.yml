@@ -84,11 +84,14 @@ jobs:
         run: |
           BASE="https://jitpack.io/com/github/TeamNewPipe/NewPipeExtractor/$SHA"
           # Der erste Abruf stößt den Build an; JitPack braucht dafür einige Minuten.
-          for i in $(seq 1 30); do
-            CODE=$(curl -s -o /dev/null -w '%{http_code}' -m 120 "$BASE/NewPipeExtractor-$SHA.pom" || true)
+          # Selten abfragen: zu häufige Anfragen beantwortet JitPack mit HTTP 429.
+          for i in $(seq 1 12); do
+            CODE=$(curl -s -o /dev/null -D headers.txt -w '%{http_code}' -m 120 "$BASE/NewPipeExtractor-$SHA.pom" || true)
             echo "Versuch $i: HTTP $CODE"
             [ "$CODE" = 200 ] && exit 0
-            sleep 30
+            WAIT=$(grep -i '^retry-after:' headers.txt | tr -dc '0-9' || true)
+            [ -n "$WAIT" ] && [ "$WAIT" -le 600 ] || WAIT=120
+            sleep "$WAIT"
           done
           echo "::error::JitPack hat NewPipeExtractor $SHA nicht bereitgestellt. Build-Log: $BASE/build.log"
           echo "JitPack-Build für $SHA nicht verfügbar — kein YouTube-Problem. Log: $BASE/build.log" >> "$GITHUB_STEP_SUMMARY"
