@@ -1,21 +1,25 @@
-# NewPipe Health-Check & Nightly-Build (GitHub-Variante von .gitea/workflows/newpipe-healthcheck.yml)
+# NewPipe Health-Check, Nightly & automatischer Hotfix
+# (GitHub-Variante von .gitea/workflows/newpipe-healthcheck.yml)
 #
 # Läuft täglich, weil YouTube und NewPipe sich unabhängig von diesem Repo ändern:
-#   - resolve:   aktuellen Commit von TeamNewPipe/NewPipeExtractor@dev ermitteln. Ist es
-#                derselbe wie im aktuellen Nightly, entfallen healthcheck und nightly.
-#                Sonst sicherstellen, dass JitPack ihn gebaut hat. Statt "dev-SNAPSHOT" wird
-#                der Commit-Hash verwendet — JitPacks dev-SNAPSHOT kann veraltet oder
-#                kaputt sein (zeigte z. B. auf dev-eb53b79e62 ohne POM).
-#                Liefert JitPack nicht (z. B. HTTP 429), endet der Lauf grün mit Warnung und
-#                ohne Issue; der Dev-Check wird beim nächsten Lauf wiederholt.
-#   - healthcheck: Rhino-Test + Smoke-Test (inkl. Abruf der dekodierten Stream-URL)
-#                gegen genau diesen Commit. Rot → Issue (bestehendes offenes wird kommentiert).
-#   - pinned:    (immer) derselbe Smoke-Test gegen die in app/build.gradle.kts gepinnte Version,
-#                also das, was Nutzer der Releases gerade installiert haben.
-#   - nightly:   nur wenn der Dev-Check grün ist: signierte APK mit GENAU dem getesteten
-#                Commit als rollendes "nightly"-Release.
-#
-# Die F-Droid-/Release-Builds sind davon unabhängig: sie nutzen die gepinnte Version.
+#   - resolve:   aktuellen Commit von TeamNewPipe/NewPipeExtractor@dev ermitteln und
+#                prüfen, ob er schon im Nightly steckt. Wenn nicht, sicherstellen, dass
+#                JitPack ihn gebaut hat. Statt "dev-SNAPSHOT" wird der Commit-Hash
+#                verwendet — JitPacks dev-SNAPSHOT kann veraltet oder kaputt sein.
+#                Liefert JitPack nicht (z. B. HTTP 429), endet der Lauf grün mit Warnung
+#                und ohne Issue; der Dev-Check wird beim nächsten Lauf wiederholt.
+#   - pinned:    (immer) Rhino-Test + Smoke-Test (Suche und Abruf der DEKODIERTEN
+#                Stream-URL) mit der NewPipe-Version des letzten stabilen Releases, also
+#                dem, was Nutzer installiert haben. Scheitert er, folgt nach 5 Minuten ein
+#                zweiter Versuch; erst wenn beide scheitern, gilt die Version als kaputt.
+#   - healthcheck: dieselben Tests gegen den dev-Commit. Läuft, wenn dev neu ist ODER die
+#                Release-Version kaputt ist. Rot → Issue (offenes wird kommentiert).
+#   - nightly:   nur bei neuem dev-Commit und grünem Dev-Check: signierte APK mit GENAU
+#                dem getesteten Commit als rollendes "nightly"-Release.
+#   - hotfix + publish: NUR wenn die Release-Version kaputt ist UND der dev-Commit die
+#                Tests besteht: ausgehend vom letzten Release-Tag den dev-Commit pinnen,
+#                Patch-Version erhöhen, Tests erneut ausführen, Tag pushen, nach master
+#                mergen und über release.yml veröffentlichen (inkl. F-Droid-Repo).
 #
 # Benötigte Repository-Secrets (Settings → Secrets and variables → Actions):
 #   KEYSTORE_B64       — Keystore base64-kodiert:  base64 -w0 yunemusic.jks
@@ -38,6 +42,10 @@ on:
         description: 'Dev-Check auch ausführen, wenn sich NewPipe dev nicht geändert hat'
         type: boolean
         default: false
+      test_hotfix:
+        description: 'Testlauf: Release-Version als kaputt behandeln, Hotfix nur vorbereiten (nichts pushen)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -47,6 +55,7 @@ env:
   SMOKE_TESTS: >-
     --tests com.yunemusic.smoke.NewPipeSmokeTest
     --tests com.yunemusic.data.RuntimeCompatibilityTest
+  PINNED_ISSUE: Gepinnte NewPipe-Version funktioniert nicht mehr
 
 jobs:
   resolve:
@@ -54,7 +63,8 @@ jobs:
     outputs:
       sha: ${{ steps.sha.outputs.sha }}
       changed: ${{ steps.changed.outputs.changed }}
-      available: ${{ steps.jitpack.outputs.available }}
+      # unverändert = steckt im Nightly, JitPack hat ihn also schon gebaut
+      available: ${{ steps.changed.outputs.changed == 'false' || steps.jitpack.outputs.available == 'true' }}
     steps:
       - name: Aktuellen NewPipeExtractor-dev-Commit ermitteln
         id: sha
@@ -74,7 +84,7 @@ jobs:
           NOTES=$(gh release view nightly -R "$GITHUB_REPOSITORY" --json body --jq .body 2>/dev/null || true)
           if [ "$FORCE" != true ] && grep -qF "\`$SHA\`" <<<"$NOTES"; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "Nightly enthält bereits $SHA — Dev-Check und Nightly entfallen." >> "$GITHUB_STEP_SUMMARY"
+            echo "Nightly enthält bereits $SHA — Dev-Check und Nightly entfallen (außer die Release-Version ist kaputt)." >> "$GITHUB_STEP_SUMMARY"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
@@ -103,9 +113,64 @@ jobs:
           echo "::warning::JitPack hat NewPipeExtractor $SHA nicht bereitgestellt (letzte Antwort: HTTP $CODE). Dev-Check wird beim nächsten Lauf wiederholt. Build-Log: $BASE/build.log"
           echo "JitPack-Build für $SHA nicht verfügbar (HTTP $CODE) — kein YouTube-Problem, nächster Lauf versucht es erneut. Log: $BASE/build.log" >> "$GITHUB_STEP_SUMMARY"
 
+  pinned:
+    runs-on: ubuntu-latest
+    outputs:
+      broken: ${{ steps.test.outcome == 'failure' || inputs.test_hotfix == true }}
+      release: ${{ steps.version.outputs.release }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: NewPipe-Version des letzten Releases ermitteln
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RELEASE=$(gh release list --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName')
+          git fetch -q --depth 1 origin "refs/tags/$RELEASE:refs/tags/$RELEASE"
+          VERSION=$(git show "$RELEASE:app/build.gradle.kts" | grep -oP 'newpipeVersion"\) as\? String\) \?: "\K[^"]+')
+          [ -n "$VERSION" ] || { echo "::error::NewPipe-Version in $RELEASE nicht gefunden"; exit 1; }
+          echo "release=$RELEASE" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Letztes Release $RELEASE nutzt NewPipeExtractor $VERSION" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Smoke-Test mit NewPipe ${{ steps.version.outputs.version }} (Release ${{ steps.version.outputs.release }})
+        id: test
+        continue-on-error: true
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          chmod +x gradlew
+          smoke() { ./gradlew -PnewpipeVersion="$VERSION" --no-daemon :app:testDebugUnitTest $SMOKE_TESTS; }
+          smoke || { echo "::warning::Erster Versuch fehlgeschlagen, neuer Versuch in 5 Minuten"; sleep 300; smoke; }
+
+      - name: Issue bei Fehlschlag anlegen oder ergänzen
+        if: steps.test.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: ${{ env.PINNED_ISSUE }}
+          BODY: |
+            Der Smoke-Test mit NewPipe `${{ steps.version.outputs.version }}` aus Release ${{ steps.version.outputs.release }} ist zweimal fehlgeschlagen. Die veröffentlichte App ist vermutlich betroffen (Suche oder Dekodierung der Stream-URLs). Besteht der aktuelle NewPipe-dev-Stand die Tests, wird automatisch ein Hotfix-Release erstellt.
+
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: bash .github/scripts/report-issue.sh
+
+      - name: Lauf als fehlgeschlagen markieren
+        if: steps.test.outcome == 'failure'
+        run: exit 1
+
   healthcheck:
-    needs: resolve
-    if: needs.resolve.outputs.changed == 'true' && needs.resolve.outputs.available == 'true'
+    needs: [resolve, pinned]
+    if: >-
+      !cancelled() && needs.resolve.result == 'success' && needs.resolve.outputs.available == 'true' &&
+      (needs.resolve.outputs.changed == 'true' || needs.pinned.outputs.broken == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -129,42 +194,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TITLE: NewPipe Health-Check fehlgeschlagen
           BODY: |
-            Der Smoke-Test gegen NewPipeExtractor dev (`${{ needs.resolve.outputs.sha }}`) ist fehlgeschlagen. Vermutlich hat YouTube etwas geändert und der dev-Stand enthält noch keinen Fix. Es wird kein Nightly veröffentlicht.
-
-            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: bash .github/scripts/report-issue.sh
-
-  pinned:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - uses: gradle/actions/setup-gradle@v4
-
-      - name: Smoke-Test mit gepinnter NewPipe-Version
-        run: |
-          chmod +x gradlew
-          ./gradlew --no-daemon :app:testDebugUnitTest $SMOKE_TESTS
-
-      - name: Issue bei Fehlschlag anlegen oder ergänzen
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TITLE: Gepinnte NewPipe-Version funktioniert nicht mehr
-          BODY: |
-            Der Smoke-Test mit der in app/build.gradle.kts gepinnten NewPipe-Version ist fehlgeschlagen. Die veröffentlichten Releases sind vermutlich betroffen (Suche oder Dekodierung der Stream-URLs).
+            Der Smoke-Test gegen NewPipeExtractor dev (`${{ needs.resolve.outputs.sha }}`) ist fehlgeschlagen. Vermutlich hat YouTube etwas geändert und der dev-Stand enthält noch keinen Fix. Es wird weder ein Nightly noch ein Hotfix veröffentlicht.
 
             Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: bash .github/scripts/report-issue.sh
 
   nightly:
     needs: [resolve, healthcheck]
-    if: github.event_name == 'schedule' || inputs.nightly
+    if: >-
+      !cancelled() && needs.healthcheck.result == 'success' && needs.resolve.outputs.changed == 'true' &&
+      (github.event_name == 'schedule' || inputs.nightly)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -203,3 +242,80 @@ jobs:
             --target "${{ github.sha }}" \
             --title "Nightly ${{ github.run_number }}" \
             --notes "Automatischer Build mit NewPipeExtractor dev \`${{ needs.resolve.outputs.sha }}\` (https://github.com/TeamNewPipe/NewPipeExtractor/commit/${{ needs.resolve.outputs.sha }}). Smoke-Test inkl. Abruf der dekodierten Stream-URL bestanden; nicht auf einem Gerät getestet."
+
+  hotfix:
+    needs: [resolve, pinned, healthcheck]
+    if: >-
+      !cancelled() && needs.pinned.outputs.broken == 'true' && needs.healthcheck.result == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.push.outputs.tag }}
+    env:
+      SHA: ${{ needs.resolve.outputs.sha }}
+      DRY_RUN: ${{ inputs.test_hotfix == true }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Hotfix vorbereiten (NewPipe ${{ needs.resolve.outputs.sha }})
+        id: prepare
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Das Skript wechselt auf das Release-Tag, wo es selbst nicht existiert
+          cp .github/scripts/prepare-hotfix.sh "$RUNNER_TEMP/"
+          TAG=$(bash "$RUNNER_TEMP/prepare-hotfix.sh" "${{ needs.pinned.outputs.release }}" "$SHA")
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          git show --stat HEAD
+          git show HEAD -- app/build.gradle.kts
+          echo "Hotfix $TAG vorbereitet (NewPipe $SHA, Testlauf: $DRY_RUN)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Tests auf dem Hotfix-Stand
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon :app:testDebugUnitTest $SMOKE_TESTS
+
+      - name: Tag pushen und nach master übernehmen
+        id: push
+        if: env.DRY_RUN != 'true'
+        env:
+          TAG: ${{ steps.prepare.outputs.tag }}
+        run: |
+          git push origin "$TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          git checkout -q -B master origin/master
+          if git merge --no-edit hotfix && git push origin master; then
+            echo "merged=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Hotfix $TAG konnte nicht automatisch nach master übernommen werden"
+            echo "merged=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Ergebnis im Issue vermerken
+        if: env.DRY_RUN != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: ${{ env.PINNED_ISSUE }}
+          MERGE_NOTE: >-
+            ${{ steps.push.outputs.merged != 'true' && 'ACHTUNG: Der Hotfix-Commit ließ sich nicht automatisch nach master mergen — bitte von Hand übernehmen, sonst fehlt master die neue Version.' || '' }}
+          BODY: |
+            Hotfix-Release ${{ steps.prepare.outputs.tag }} wird automatisch veröffentlicht (NewPipeExtractor `${{ needs.resolve.outputs.sha }}`, Tests inkl. Dekodierung bestanden; nicht auf einem Gerät getestet). Es erscheint danach auch im F-Droid-Repo.
+
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: BODY="$BODY $MERGE_NOTE" bash .github/scripts/report-issue.sh
+
+  publish:
+    needs: hotfix
+    if: ${{ !cancelled() && needs.hotfix.result == 'success' && needs.hotfix.outputs.tag != '' }}
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.hotfix.outputs.tag }}
+    secrets: inherit
