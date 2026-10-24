@@ -1,11 +1,24 @@
 package com.yunemusic
 
 import android.Manifest
+import android.bluetooth.BluetoothDevice
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.provider.MediaStore
 import androidx.activity.viewModels
 import com.yunemusic.ui.player.PlayerViewModel
 import com.yunemusic.service.voiceSearchQuery
+import androidx.lifecycle.lifecycleScope
+import com.yunemusic.data.preferences.UserPreferences
+import com.yunemusic.service.ACTION_OPEN_CAR_MODE
+import com.yunemusic.service.bluetoothDeviceAddress
+import com.yunemusic.service.isCarModeDevice
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -25,6 +38,23 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val playerViewModel: PlayerViewModel by viewModels()
 
+    @Inject lateinit var userPreferences: UserPreferences
+
+    // true opens the car mode, false closes it. Buffered so the launch intent survives
+    // until the NavHost starts collecting.
+    private val carModeCommands = Channel<Boolean>(Channel.BUFFERED)
+
+    // Leaving the car must not keep the screen on in a pocket, so the car mode closes
+    // when the picked radio disconnects.
+    private val carDisconnectReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val address = intent.bluetoothDeviceAddress() ?: return
+            lifecycleScope.launch {
+                if (isCarModeDevice(userPreferences, address)) carModeCommands.send(false)
+            }
+        }
+    }
+
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { /* handle result if needed */ }
@@ -34,6 +64,11 @@ class MainActivity : ComponentActivity() {
 
         requestNotificationPermissionIfNeeded()
         if (savedInstanceState == null) handlePlaybackIntent(intent)
+        ContextCompat.registerReceiver(
+            this, carDisconnectReceiver,
+            IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECTED),
+            ContextCompat.RECEIVER_EXPORTED
+        )
 
         setContent {
             YuneMusicTheme {
@@ -41,10 +76,15 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    YuneMusicNavHost(playerViewModel)
+                    YuneMusicNavHost(playerViewModel, carModeCommands.receiveAsFlow())
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        unregisterReceiver(carDisconnectReceiver)
+        super.onDestroy()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -54,8 +94,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handlePlaybackIntent(intent: Intent?) {
-        if (intent?.action == MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH) {
-            playerViewModel.playFromSearch(voiceSearchQuery(intent))
+        when (intent?.action) {
+            MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH ->
+                playerViewModel.playFromSearch(voiceSearchQuery(intent))
+            ACTION_OPEN_CAR_MODE -> carModeCommands.trySend(true)
         }
     }
 

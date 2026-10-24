@@ -31,6 +31,10 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showResetDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val pickCarDevice = rememberCarDevicePicker(
+        onPicked = viewModel::updateCarModeDevice,
+        onFailed = viewModel::onCarDevicePickFailed
+    )
 
     if (showResetDialog) {
         AlertDialog(
@@ -316,7 +320,14 @@ fun SettingsScreen(
                             ) {
                                 RadioButton(
                                     selected = uiState.carModeTrigger == triggerValues[index],
-                                    onClick = { viewModel.updateCarModeTrigger(triggerValues[index]) },
+                                    onClick = {
+                                        // Bluetooth needs a picked car radio, otherwise any device would count.
+                                        if (triggerValues[index] == "bluetooth" && uiState.carModeDeviceAddress == null) {
+                                            pickCarDevice()
+                                        } else {
+                                            viewModel.updateCarModeTrigger(triggerValues[index])
+                                        }
+                                    },
                                     colors = RadioButtonDefaults.colors(
                                         selectedColor = SignalOrange,
                                         unselectedColor = TextTertiary
@@ -327,6 +338,25 @@ fun SettingsScreen(
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = if (uiState.carModeTrigger == triggerValues[index]) TextPrimary else TextSecondary
                                 )
+                            }
+                        }
+                        if (uiState.carModeTrigger == "bluetooth" && uiState.carModeDeviceAddress != null) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = stringResource(
+                                    R.string.settings_car_mode_device,
+                                    uiState.carModeDeviceName ?: uiState.carModeDeviceAddress!!
+                                ),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = stringResource(R.string.settings_car_mode_device_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+                            TextButton(onClick = pickCarDevice) {
+                                Text(stringResource(R.string.settings_car_mode_change_device), color = SignalOrange)
                             }
                         }
                         Spacer(modifier = Modifier.height(8.dp))

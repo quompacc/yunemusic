@@ -23,8 +23,8 @@ android {
         minSdk = 26
         targetSdk = 34
         // CI (Gitea Actions) setzt -PciVersionCode/-PciVersionName pro Build
-        versionCode = (project.findProperty("ciVersionCode") as? String)?.toIntOrNull() ?: 16
-        versionName = (project.findProperty("ciVersionName") as? String) ?: "1.5.5"
+        versionCode = (project.findProperty("ciVersionCode") as? String)?.toIntOrNull() ?: 17
+        versionName = (project.findProperty("ciVersionName") as? String) ?: "1.5.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

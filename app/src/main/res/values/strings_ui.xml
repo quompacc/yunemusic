@@ -25,6 +25,10 @@
     <string name="settings_car_mode_manual">Manual</string>
     <string name="settings_car_mode_bluetooth">Bluetooth</string>
     <string name="settings_open_car_mode">Open Car Mode</string>
+    <string name="settings_car_mode_device">Car radio: %1$s</string>
+    <string name="settings_car_mode_device_hint">Car Mode opens when this device connects and closes when it disconnects. Headphones and other devices are ignored.</string>
+    <string name="settings_car_mode_change_device">Change device</string>
+    <string name="settings_car_mode_pick_failed">No car radio selected. Bluetooth permission is required.</string>
     <string name="settings_section_profile">Profile</string>
     <string name="settings_taste_profile">Taste profile</string>
     <string name="settings_taste_profile_desc">Your listening preferences are learned automatically from what you play.</string>

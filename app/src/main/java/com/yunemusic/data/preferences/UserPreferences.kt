@@ -23,6 +23,8 @@ class UserPreferences @Inject constructor(
         val KEY_WIFI_ONLY = booleanPreferencesKey("wifi_only")
         val KEY_PREFETCH_ENABLED = booleanPreferencesKey("prefetch_enabled")
         val KEY_CAR_MODE_TRIGGER = stringPreferencesKey("car_mode_trigger") // bluetooth, manual
+        val KEY_CAR_MODE_DEVICE_ADDRESS = stringPreferencesKey("car_mode_device_address")
+        val KEY_CAR_MODE_DEVICE_NAME = stringPreferencesKey("car_mode_device_name")
         val KEY_TASTE_PROFILE_JSON = stringPreferencesKey("taste_profile_json")
         val KEY_LOUDNESS_LIMITER = booleanPreferencesKey("loudness_limiter")
         val KEY_DUCK_ON_NOTIFICATION = booleanPreferencesKey("duck_on_notification")
@@ -48,6 +50,24 @@ class UserPreferences @Inject constructor(
             else throw exception
         }
         .map { prefs -> prefs[KEY_CAR_MODE_TRIGGER] ?: "manual" }
+
+    /** Bluetooth address of the car radio that opens the car mode; other devices are ignored. */
+    val carModeDeviceAddress: Flow<String?> = context.dataStore.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { it[KEY_CAR_MODE_DEVICE_ADDRESS] }
+
+    val carModeDeviceName: Flow<String?> = context.dataStore.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { it[KEY_CAR_MODE_DEVICE_NAME] }
+
+    suspend fun setCarModeDevice(address: String, name: String?) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_CAR_MODE_DEVICE_ADDRESS] = address
+            if (name.isNullOrBlank()) prefs.remove(KEY_CAR_MODE_DEVICE_NAME)
+            else prefs[KEY_CAR_MODE_DEVICE_NAME] = name
+            prefs[KEY_CAR_MODE_TRIGGER] = "bluetooth"
+        }
+    }
 
     val prefetchEnabled: Flow<Boolean> = context.dataStore.data
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }

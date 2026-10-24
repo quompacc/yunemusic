@@ -1,0 +1,3 @@
+- Car Mode opens automatically when the selected car radio connects via Bluetooth
+- Car Mode closes again when the car radio disconnects
+- Headphones and other Bluetooth devices do not trigger Car Mode

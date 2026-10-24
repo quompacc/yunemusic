@@ -1,0 +1,3 @@
+- Car Mode öffnet sich automatisch, wenn sich das ausgewählte Autoradio per Bluetooth verbindet
+- Car Mode schließt sich wieder, wenn das Autoradio getrennt wird
+- Kopfhörer und andere Bluetooth-Geräte lösen den Car Mode nicht aus

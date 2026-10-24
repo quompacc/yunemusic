@@ -11,6 +11,8 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -74,10 +76,24 @@ sealed class Screen(
 val bottomNavScreens = listOf(Screen.Home, Screen.Library, Screen.Settings)
 
 @Composable
-fun YuneMusicNavHost(playerViewModel: PlayerViewModel = hiltViewModel()) {
+fun YuneMusicNavHost(
+    playerViewModel: PlayerViewModel = hiltViewModel(),
+    carModeCommands: Flow<Boolean> = emptyFlow()
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+
+    LaunchedEffect(carModeCommands) {
+        carModeCommands.collect { open ->
+            val inCarMode = navController.currentDestination?.route == Screen.CarMode.route
+            if (open && !inCarMode) {
+                navController.navigate(Screen.CarMode.route) { launchSingleTop = true }
+            } else if (!open && inCarMode) {
+                navController.popBackStack()
+            }
+        }
+    }
 
     val showBottomBar = currentDestination?.route !in listOf(
         Screen.Player.route,

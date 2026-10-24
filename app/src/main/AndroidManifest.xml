@@ -14,6 +14,8 @@
     <!-- required="false" verhindert Installations-Fehler auf Geräten ohne diese Features -->
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
+    <!-- Car radio pick for the Bluetooth car mode trigger -->
+    <uses-feature android:name="android.software.companion_device_setup" android:required="false" />
 
     <application
         android:name=".YuneMusicApp"
@@ -72,6 +74,16 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+
+        <!-- Opens Car Mode when the picked car radio connects. ACL_CONNECTED is a protected
+             broadcast sent by the Bluetooth stack, so the receiver must be exported. -->
+        <receiver
+            android:name=".service.CarConnectionReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.bluetooth.device.action.ACL_CONNECTED" />
+            </intent-filter>
+        </receiver>
 
         <receiver
             android:name="androidx.media.session.MediaButtonReceiver"

@@ -16,6 +16,8 @@ data class SettingsUiState(
     val wifiOnly: Boolean = false,
     val prefetchEnabled: Boolean = true,
     val carModeTrigger: String = "manual",
+    val carModeDeviceAddress: String? = null,
+    val carModeDeviceName: String? = null,
     val loudnessLimiter: Boolean = true,
     val duckOnNotification: Boolean = true,
     @StringRes val message: Int? = null,
@@ -36,6 +38,12 @@ class SettingsViewModel @Inject constructor(
             userPreferences.prefetchEnabled.collect { enabled ->
                 _uiState.update { it.copy(prefetchEnabled = enabled) }
             }
+        }
+        viewModelScope.launch {
+            combine(userPreferences.carModeDeviceAddress, userPreferences.carModeDeviceName, ::Pair)
+                .collect { (address, name) ->
+                    _uiState.update { it.copy(carModeDeviceAddress = address, carModeDeviceName = name) }
+                }
         }
         viewModelScope.launch {
             combine(
@@ -84,6 +92,14 @@ class SettingsViewModel @Inject constructor(
 
     fun updateCarModeTrigger(trigger: String) {
         viewModelScope.launch { userPreferences.setCarModeTrigger(trigger) }
+    }
+
+    fun updateCarModeDevice(address: String, name: String?) {
+        viewModelScope.launch { userPreferences.setCarModeDevice(address, name) }
+    }
+
+    fun onCarDevicePickFailed() {
+        showMessage(R.string.settings_car_mode_pick_failed, isError = true)
     }
 
     fun updateLoudnessLimiter(enabled: Boolean) {
