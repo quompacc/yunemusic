@@ -2,6 +2,10 @@
 # veröffentlichen. Der Release-Text stammt aus dem Fastlane-Changelog des versionCodes.
 # F-Droid baut dasselbe Tag unabhängig davon selbst.
 #
+# Wird auch vom Health-Check aufgerufen (workflow_call), wenn er automatisch ein
+# Hotfix-Tag angelegt hat — Tags, die mit dem GITHUB_TOKEN gepusht werden, lösen
+# diesen Workflow sonst nicht aus.
+#
 # Secrets wie in newpipe-healthcheck.yml.
 
 name: Release
@@ -9,6 +13,12 @@ name: Release
 on:
   push:
     tags: ['v*']
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Zu veröffentlichendes Tag (vX.Y.Z)'
+        type: string
+        required: true
 
 permissions:
   contents: write
@@ -16,8 +26,12 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - uses: actions/setup-java@v4
         with:
@@ -37,8 +51,8 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew --no-daemon :app:assembleRelease
-          mv app/build/outputs/apk/release/app-release.apk "YuneMusic-${GITHUB_REF_NAME#v}.apk"
-          sha256sum YuneMusic-*.apk > "YuneMusic-${GITHUB_REF_NAME#v}.apk.sha256"
+          mv app/build/outputs/apk/release/app-release.apk "YuneMusic-${TAG#v}.apk"
+          sha256sum YuneMusic-*.apk > "YuneMusic-${TAG#v}.apk.sha256"
 
       - name: GitHub-Release anlegen
         env:
@@ -47,8 +61,8 @@ jobs:
           CODE=$(grep -oP 'toIntOrNull\(\) \?: \K[0-9]+' app/build.gradle.kts)
           NOTES=fastlane/metadata/android/en-US/changelogs/${CODE}.txt
           [ -f "$NOTES" ] || NOTES=/dev/null
-          gh release create "$GITHUB_REF_NAME" YuneMusic-*.apk YuneMusic-*.apk.sha256 \
-            --title "YuneMusic ${GITHUB_REF_NAME#v}" --notes-file "$NOTES"
+          gh release create "$TAG" YuneMusic-*.apk YuneMusic-*.apk.sha256 \
+            --title "YuneMusic ${TAG#v}" --notes-file "$NOTES"
 
   # Eigenes F-Droid-Repo mit dem neuen Release aktualisieren
   fdroid:
