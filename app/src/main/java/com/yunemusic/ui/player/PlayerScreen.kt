@@ -35,6 +35,7 @@ import com.yunemusic.ui.theme.*
 fun PlayerScreen(
     onNavigateBack: () -> Unit,
     onQueueClick: () -> Unit,
+    onCarModeClick: () -> Unit,
     viewModel: PlayerViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -92,12 +93,21 @@ fun PlayerScreen(
                     style = MaterialTheme.typography.labelLarge,
                     color = TextSecondary
                 )
-                IconButton(onClick = onQueueClick) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.QueueMusic,
-                        contentDescription = stringResource(R.string.player_queue),
-                        tint = TextSecondary
-                    )
+                Row {
+                    IconButton(onClick = onCarModeClick) {
+                        Icon(
+                            imageVector = Icons.Default.DirectionsCar,
+                            contentDescription = stringResource(R.string.carmode_title),
+                            tint = TextSecondary
+                        )
+                    }
+                    IconButton(onClick = onQueueClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                            contentDescription = stringResource(R.string.player_queue),
+                            tint = TextSecondary
+                        )
+                    }
                 }
             }
 

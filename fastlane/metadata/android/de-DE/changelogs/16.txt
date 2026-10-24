@@ -1,0 +1,4 @@
+- Car Mode mit großen Tasten, die auch während der Fahrt gut zu treffen sind
+- Car Mode erscheint über dem Sperrbildschirm und hält den Bildschirm an
+- Car Mode unterstützt das Querformat
+- Car Mode direkt aus dem Player öffnen

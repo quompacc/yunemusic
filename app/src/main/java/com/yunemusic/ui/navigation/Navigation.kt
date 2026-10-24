@@ -218,6 +218,9 @@ fun YuneMusicNavHost(playerViewModel: PlayerViewModel = hiltViewModel()) {
                 PlayerScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onQueueClick = { playerViewModel.toggleQueueVisibility() },
+                    onCarModeClick = {
+                        navController.navigate(Screen.CarMode.route) { launchSingleTop = true }
+                    },
                     viewModel = playerViewModel
                 )
             }

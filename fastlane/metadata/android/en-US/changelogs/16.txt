@@ -1,0 +1,4 @@
+- Car Mode with large buttons that are easy to hit while driving
+- Car Mode shows over the lock screen and keeps the screen on
+- Car Mode supports landscape
+- Open Car Mode directly from the player
