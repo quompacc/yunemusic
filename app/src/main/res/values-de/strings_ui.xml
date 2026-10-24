@@ -28,7 +28,8 @@
     <string name="settings_car_mode_device">Autoradio: %1$s</string>
     <string name="settings_car_mode_device_hint">Car Mode öffnet sich, wenn dieses Gerät sich verbindet, und schließt sich beim Trennen. Kopfhörer und andere Geräte werden ignoriert.</string>
     <string name="settings_car_mode_change_device">Gerät ändern</string>
-    <string name="settings_car_mode_pick_failed">Kein Autoradio ausgewählt. Die Bluetooth-Berechtigung wird benötigt.</string>
+    <string name="settings_car_mode_pick_title">Autoradio wählen</string>
+    <string name="settings_car_mode_pick_failed">Kein Autoradio ausgewählt. Koppel es zuerst per Bluetooth und erlaube die Bluetooth-Berechtigung.</string>
     <string name="settings_section_profile">Profil</string>
     <string name="settings_taste_profile">Taste Profile</string>
     <string name="settings_taste_profile_desc">Deine Hörpräferenzen werden automatisch aus deiner Wiedergabe gelernt.</string>
