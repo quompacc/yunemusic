@@ -1,0 +1,1 @@
+- Sicherung & Umzug: Geschmacksprofil, Verlauf, Bibliothek, Playlists und Einstellungen als Datei exportieren und auf einem neuen Gerät importieren

@@ -9,6 +9,9 @@ interface TrackDao {
     @Query("SELECT * FROM tracks ORDER BY addedAt DESC")
     fun getAllTracks(): Flow<List<TrackEntity>>
 
+    @Query("SELECT * FROM tracks")
+    suspend fun getAllTracksOnce(): List<TrackEntity>
+
     @Query("SELECT * FROM tracks WHERE isLiked = 1 ORDER BY addedAt DESC")
     fun getLikedTracks(): Flow<List<TrackEntity>>
 

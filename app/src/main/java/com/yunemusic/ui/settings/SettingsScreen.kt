@@ -1,5 +1,8 @@
 package com.yunemusic.ui.settings
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,11 +33,40 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showResetDialog by remember { mutableStateOf(false) }
+    var pendingImport by remember { mutableStateOf<Uri?>(null) }
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri -> uri?.let(viewModel::exportBackup) }
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> pendingImport = uri }
     val context = LocalContext.current
     val pickCarDevice = rememberCarDevicePicker(
         onPicked = viewModel::updateCarModeDevice,
         onFailed = viewModel::onCarDevicePickFailed
     )
+
+    pendingImport?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { pendingImport = null },
+            title = { Text(stringResource(R.string.settings_backup_import_dialog_title), color = TextPrimary) },
+            text = { Text(stringResource(R.string.settings_backup_import_dialog_text), color = TextSecondary) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.importBackup(uri)
+                    pendingImport = null
+                }) {
+                    Text(stringResource(R.string.settings_backup_import_confirm), color = ErrorRed)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingImport = null }) {
+                    Text(stringResource(R.string.settings_cancel), color = TextSecondary)
+                }
+            },
+            containerColor = SurfaceVariantDark
+        )
+    }
 
     if (showResetDialog) {
         AlertDialog(
@@ -420,6 +452,60 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(stringResource(R.string.settings_reset_taste_profile))
+                        }
+                    }
+                }
+            }
+
+            // Backup Section
+            item {
+                SettingsSectionHeader(stringResource(R.string.settings_section_backup))
+            }
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardDark),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = stringResource(R.string.settings_backup_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextTertiary
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = { exportLauncher.launch("yunemusic-backup-${java.time.LocalDate.now()}.json") },
+                            colors = ButtonDefaults.buttonColors(containerColor = SignalContainer),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Upload,
+                                contentDescription = null,
+                                tint = OnSignalContainer,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.settings_backup_export), color = OnSignalContainer)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            // Some file providers report JSON files as generic binary or text.
+                            onClick = { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "text/plain")) },
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Download,
+                                contentDescription = null,
+                                tint = TextPrimary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.settings_backup_import), color = TextPrimary)
                         }
                     }
                 }

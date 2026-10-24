@@ -103,4 +103,15 @@
     </plurals>
     <string name="queue_empty">Queue is empty</string>
     <string name="queue_remove">Remove</string>
+    <string name="settings_section_backup">Backup &amp; transfer</string>
+    <string name="settings_backup_desc">Saves your taste profile, play history, library, playlists and settings to a file. Import it on another device to keep your recommendations. Downloaded audio files are not included.</string>
+    <string name="settings_backup_export">Export data</string>
+    <string name="settings_backup_import">Import data</string>
+    <string name="settings_backup_import_dialog_title">Import backup?</string>
+    <string name="settings_backup_import_dialog_text">This replaces the library, playlists, play history, taste profile and settings on this device. Downloaded files stay.</string>
+    <string name="settings_backup_import_confirm">Import</string>
+    <string name="settings_backup_export_done">Backup saved</string>
+    <string name="settings_backup_export_failed">Backup could not be saved</string>
+    <string name="settings_backup_import_done">Backup imported</string>
+    <string name="settings_backup_import_failed">File is not a valid YuneMusic backup</string>
 </resources>

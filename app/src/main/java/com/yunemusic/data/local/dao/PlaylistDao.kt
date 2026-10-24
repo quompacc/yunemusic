@@ -46,6 +46,26 @@ interface PlaylistDao {
     @Query("DELETE FROM playlist_tracks WHERE playlistId = :playlistId AND trackId = :trackId")
     suspend fun removeTrack(playlistId: Long, trackId: String)
 
+    // ── Backup ──────────────────────────────────────────────────────────────
+
+    @Query("SELECT * FROM playlists")
+    suspend fun getAllPlaylists(): List<PlaylistEntity>
+
+    @Query("SELECT * FROM playlist_tracks")
+    suspend fun getAllPlaylistTracks(): List<PlaylistTrackEntity>
+
+    @Insert
+    suspend fun insertPlaylists(playlists: List<PlaylistEntity>)
+
+    @Insert
+    suspend fun insertPlaylistTracks(entries: List<PlaylistTrackEntity>)
+
+    @Query("DELETE FROM playlist_tracks")
+    suspend fun deleteAllPlaylistTracks()
+
+    @Query("DELETE FROM playlists")
+    suspend fun deleteAllPlaylists()
+
     @Query("SELECT * FROM playlist_tracks WHERE playlistId = :playlistId ORDER BY position ASC, addedAt ASC")
     fun getTracksForPlaylist(playlistId: Long): Flow<List<PlaylistTrackEntity>>
 }

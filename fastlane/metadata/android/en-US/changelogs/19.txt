@@ -1,0 +1,1 @@
+- Backup & transfer: export taste profile, history, library, playlists and settings to a file and import them on a new device

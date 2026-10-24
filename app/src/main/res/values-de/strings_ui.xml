@@ -103,4 +103,15 @@
     </plurals>
     <string name="queue_empty">Warteschlange ist leer</string>
     <string name="queue_remove">Entfernen</string>
+    <string name="settings_section_backup">Sicherung &amp; Umzug</string>
+    <string name="settings_backup_desc">Speichert Geschmacksprofil, Wiedergabe-Verlauf, Bibliothek, Playlists und Einstellungen in einer Datei. Auf einem neuen Gerät importiert, bleiben deine Empfehlungen erhalten. Heruntergeladene Audiodateien sind nicht enthalten.</string>
+    <string name="settings_backup_export">Daten exportieren</string>
+    <string name="settings_backup_import">Daten importieren</string>
+    <string name="settings_backup_import_dialog_title">Sicherung importieren?</string>
+    <string name="settings_backup_import_dialog_text">Das ersetzt Bibliothek, Playlists, Wiedergabe-Verlauf, Geschmacksprofil und Einstellungen auf diesem Gerät. Heruntergeladene Dateien bleiben erhalten.</string>
+    <string name="settings_backup_import_confirm">Importieren</string>
+    <string name="settings_backup_export_done">Sicherung gespeichert</string>
+    <string name="settings_backup_export_failed">Sicherung konnte nicht gespeichert werden</string>
+    <string name="settings_backup_import_done">Sicherung importiert</string>
+    <string name="settings_backup_import_failed">Datei ist keine gültige YuneMusic-Sicherung</string>
 </resources>

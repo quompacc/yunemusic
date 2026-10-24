@@ -21,6 +21,9 @@ interface PlayEventDao {
     @Query("DELETE FROM play_events WHERE timestamp < :olderThan")
     suspend fun deleteOldEvents(olderThan: Long)
 
+    @Insert
+    suspend fun insertEvents(events: List<PlayEventEntity>)
+
     @Query("DELETE FROM play_events")
     suspend fun deleteAllEvents()
 

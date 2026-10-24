@@ -1,9 +1,12 @@
 package com.yunemusic.ui.settings
 
+import android.net.Uri
+import android.util.Log
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yunemusic.R
+import com.yunemusic.data.backup.BackupManager
 import com.yunemusic.data.preferences.UserPreferences
 import com.yunemusic.service.TasteAnalyzer
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,7 +30,8 @@ data class SettingsUiState(
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val userPreferences: UserPreferences,
-    private val tasteAnalyzer: TasteAnalyzer
+    private val tasteAnalyzer: TasteAnalyzer,
+    private val backupManager: BackupManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -108,6 +112,28 @@ class SettingsViewModel @Inject constructor(
 
     fun updateDuckOnNotification(enabled: Boolean) {
         viewModelScope.launch { userPreferences.setDuckOnNotification(enabled) }
+    }
+
+    fun exportBackup(target: Uri) {
+        viewModelScope.launch {
+            runCatching { backupManager.export(target) }
+                .onSuccess { showMessage(R.string.settings_backup_export_done) }
+                .onFailure {
+                    Log.w("SettingsViewModel", "Export fehlgeschlagen", it)
+                    showMessage(R.string.settings_backup_export_failed, isError = true)
+                }
+        }
+    }
+
+    fun importBackup(source: Uri) {
+        viewModelScope.launch {
+            runCatching { backupManager.import(source) }
+                .onSuccess { showMessage(R.string.settings_backup_import_done) }
+                .onFailure {
+                    Log.w("SettingsViewModel", "Import fehlgeschlagen", it)
+                    showMessage(R.string.settings_backup_import_failed, isError = true)
+                }
+        }
     }
 
     fun resetTasteProfile() {
