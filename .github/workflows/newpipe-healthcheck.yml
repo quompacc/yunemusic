@@ -19,10 +19,15 @@
 #                kein Nightly, kein Hotfix; der nächste Lauf versucht es erneut.
 #   - nightly:   nur bei neuem dev-Commit und grünem Dev-Check: signierte APK mit GENAU
 #                dem getesteten Commit als rollendes "nightly"-Release.
-#   - hotfix + publish: NUR wenn die Release-Version kaputt ist UND der dev-Commit die
-#                Tests besteht: ausgehend vom letzten Release-Tag den dev-Commit pinnen,
-#                Patch-Version erhöhen, Tests erneut ausführen, Tag pushen, nach master
-#                mergen und über release.yml veröffentlichen (inkl. F-Droid-Repo).
+#   - candidate: nur wenn die Release-Version kaputt ist: Ersatz-Version wählen. Zuerst
+#                das neueste NewPipe-Release (z. B. v0.27.1), sofern neuer als die gepinnte
+#                Version und es die Tests besteht; sonst der dev-Commit, falls er sie
+#                bestanden hat. NewPipe-Releases werden bevorzugt, weil sie stabiler sind
+#                als Zwischenstände von dev.
+#   - hotfix + publish: NUR wenn es einen solchen Kandidaten gibt: ausgehend vom letzten
+#                Release-Tag den Kandidaten pinnen, Patch-Version erhöhen, Tests erneut
+#                ausführen, Tag pushen, nach master mergen und über release.yml
+#                veröffentlichen (inkl. F-Droid-Repo).
 #
 # Benötigte Repository-Secrets (Settings → Secrets and variables → Actions):
 #   KEYSTORE_B64       — Keystore base64-kodiert:  base64 -w0 yunemusic.jks
@@ -121,6 +126,7 @@ jobs:
     outputs:
       broken: ${{ steps.test.outcome == 'failure' || inputs.test_hotfix == true }}
       release: ${{ steps.version.outputs.release }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
 
@@ -160,7 +166,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TITLE: ${{ env.PINNED_ISSUE }}
           BODY: |
-            Der Smoke-Test mit NewPipe `${{ steps.version.outputs.version }}` aus Release ${{ steps.version.outputs.release }} ist zweimal fehlgeschlagen. Die veröffentlichte App ist vermutlich betroffen (Suche oder Dekodierung der Stream-URLs). Besteht der aktuelle NewPipe-dev-Stand die Tests, wird automatisch ein Hotfix-Release erstellt.
+            Der Smoke-Test mit NewPipe `${{ steps.version.outputs.version }}` aus Release ${{ steps.version.outputs.release }} ist zweimal fehlgeschlagen. Die veröffentlichte App ist vermutlich betroffen (Suche oder Dekodierung der Stream-URLs). Besteht das neueste NewPipe-Release oder der aktuelle dev-Stand die Tests, wird automatisch ein Hotfix-Release erstellt.
 
             Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: bash .github/scripts/report-issue.sh
@@ -262,15 +268,74 @@ jobs:
             --title "Nightly ${{ github.run_number }}" \
             --notes "Automatischer Build mit NewPipeExtractor dev \`${{ needs.resolve.outputs.sha }}\` (https://github.com/TeamNewPipe/NewPipeExtractor/commit/${{ needs.resolve.outputs.sha }}). Smoke-Test inkl. Abruf der dekodierten Stream-URL bestanden; nicht auf einem Gerät getestet."
 
-  hotfix:
+  candidate:
     needs: [resolve, pinned, healthcheck]
+    if: ${{ !cancelled() && needs.pinned.outputs.broken == 'true' }}
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.pick.outputs.version }}
+    env:
+      PINNED: ${{ needs.pinned.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Neuestes NewPipe-Release ermitteln
+        id: release
+        run: |
+          TAG=$(git ls-remote --tags --sort=-v:refname https://github.com/TeamNewPipe/NewPipeExtractor 'v*' \
+                | grep -oP 'refs/tags/\Kv[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+          echo "NewPipe-Release: ${TAG:-keins}, gepinnt: $PINNED"
+          # Nur testen, wenn es neuer ist als die gepinnte (kaputte) Version
+          if [ -n "$TAG" ] && [ "$TAG" != "$PINNED" ] && \
+             [ "$(printf '%s\n%s\n' "$PINNED" "$TAG" | sort -V | tail -1)" = "$TAG" ]; then
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Smoke-Test mit NewPipe ${{ steps.release.outputs.tag }}
+        id: test
+        if: steps.release.outputs.tag != ''
+        continue-on-error: true
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          chmod +x gradlew
+          ./gradlew -PnewpipeVersion="$TAG" --no-daemon :app:testDebugUnitTest $SMOKE_TESTS
+
+      - name: Kandidat wählen
+        id: pick
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_OK: ${{ steps.test.outcome == 'success' }}
+          DEV_SHA: ${{ needs.resolve.outputs.sha }}
+          DEV_OK: ${{ needs.healthcheck.outputs.tested == 'true' }}
+        run: |
+          if [ "$RELEASE_OK" = true ]; then
+            VERSION=$RELEASE_TAG
+          elif [ "$DEV_OK" = true ]; then
+            VERSION=$DEV_SHA
+          else
+            echo "::warning::Weder das neueste NewPipe-Release noch der dev-Stand bestehen die Tests — kein Hotfix möglich."
+            exit 0
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Hotfix-Kandidat: NewPipeExtractor $VERSION" >> "$GITHUB_STEP_SUMMARY"
+
+  hotfix:
+    needs: [pinned, candidate]
     if: >-
-      !cancelled() && needs.pinned.outputs.broken == 'true' && needs.healthcheck.outputs.tested == 'true'
+      !cancelled() && needs.pinned.outputs.broken == 'true' && needs.candidate.outputs.version != ''
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.push.outputs.tag }}
     env:
-      SHA: ${{ needs.resolve.outputs.sha }}
+      SHA: ${{ needs.candidate.outputs.version }}
       DRY_RUN: ${{ inputs.test_hotfix == true }}
     steps:
       - uses: actions/checkout@v4
@@ -284,7 +349,7 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Hotfix vorbereiten (NewPipe ${{ needs.resolve.outputs.sha }})
+      - name: Hotfix vorbereiten (NewPipe ${{ needs.candidate.outputs.version }})
         id: prepare
         run: |
           git config user.name "github-actions[bot]"
@@ -326,7 +391,7 @@ jobs:
           MERGE_NOTE: >-
             ${{ steps.push.outputs.merged != 'true' && 'ACHTUNG: Der Hotfix-Commit ließ sich nicht automatisch nach master mergen — bitte von Hand übernehmen, sonst fehlt master die neue Version.' || '' }}
           BODY: |
-            Hotfix-Release ${{ steps.prepare.outputs.tag }} wird automatisch veröffentlicht (NewPipeExtractor `${{ needs.resolve.outputs.sha }}`, Tests inkl. Dekodierung bestanden; nicht auf einem Gerät getestet). Es erscheint danach auch im F-Droid-Repo.
+            Hotfix-Release ${{ steps.prepare.outputs.tag }} wird automatisch veröffentlicht (NewPipeExtractor `${{ needs.candidate.outputs.version }}`, Tests inkl. Dekodierung bestanden; nicht auf einem Gerät getestet). Es erscheint danach auch im F-Droid-Repo.
 
             Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: BODY="$BODY $MERGE_NOTE" bash .github/scripts/report-issue.sh
