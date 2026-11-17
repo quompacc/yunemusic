@@ -14,6 +14,9 @@
 #                zweiter Versuch; erst wenn beide scheitern, gilt die Version als kaputt.
 #   - healthcheck: dieselben Tests gegen den dev-Commit. Läuft, wenn dev neu ist ODER die
 #                Release-Version kaputt ist. Rot → Issue (offenes wird kommentiert).
+#                Lassen sich die Abhängigkeiten des dev-Commits nicht laden (NewPipe-
+#                Build-Umbau, JitPack-Fehler), gibt es nur eine Warnung — kein Issue,
+#                kein Nightly, kein Hotfix; der nächste Lauf versucht es erneut.
 #   - nightly:   nur bei neuem dev-Commit und grünem Dev-Check: signierte APK mit GENAU
 #                dem getesteten Commit als rollendes "nightly"-Release.
 #   - hotfix + publish: NUR wenn die Release-Version kaputt ist UND der dev-Commit die
@@ -172,6 +175,10 @@ jobs:
       !cancelled() && needs.resolve.result == 'success' && needs.resolve.outputs.available == 'true' &&
       (needs.resolve.outputs.changed == 'true' || needs.pinned.outputs.broken == 'true')
     runs-on: ubuntu-latest
+    outputs:
+      tested: ${{ steps.smoke.outcome == 'success' }}
+    env:
+      SHA: ${{ needs.resolve.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
 
@@ -182,11 +189,23 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Smoke-Test mit NewPipeExtractor ${{ needs.resolve.outputs.sha }}
+      - name: Abhängigkeiten von NewPipeExtractor ${{ needs.resolve.outputs.sha }} laden
+        id: deps
+        continue-on-error: true
         run: |
           chmod +x gradlew
-          ./gradlew -PnewpipeVersion=${{ needs.resolve.outputs.sha }} --no-daemon \
-            :app:testDebugUnitTest $SMOKE_TESTS
+          ./gradlew -PnewpipeVersion="$SHA" --no-daemon :app:checkDebugAarMetadata
+
+      - name: Warnung, wenn sich der dev-Stand nicht laden lässt
+        if: steps.deps.outcome == 'failure'
+        run: |
+          echo "::warning::Abhängigkeiten von NewPipeExtractor $SHA lassen sich nicht laden (Build-Problem bei NewPipe oder JitPack, kein YouTube-Problem). Kein Nightly, kein Hotfix; der nächste Lauf versucht es erneut."
+          echo "NewPipeExtractor $SHA nicht ladbar (siehe Schritt davor) — Dev-Check übersprungen, nächster Lauf versucht es erneut." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Smoke-Test mit NewPipeExtractor ${{ needs.resolve.outputs.sha }}
+        id: smoke
+        if: steps.deps.outcome == 'success'
+        run: ./gradlew -PnewpipeVersion="$SHA" --no-daemon :app:testDebugUnitTest $SMOKE_TESTS
 
       - name: Issue bei Fehlschlag anlegen oder ergänzen
         if: failure()
@@ -202,7 +221,7 @@ jobs:
   nightly:
     needs: [resolve, healthcheck]
     if: >-
-      !cancelled() && needs.healthcheck.result == 'success' && needs.resolve.outputs.changed == 'true' &&
+      !cancelled() && needs.healthcheck.outputs.tested == 'true' && needs.resolve.outputs.changed == 'true' &&
       (github.event_name == 'schedule' || inputs.nightly)
     runs-on: ubuntu-latest
     steps:
@@ -246,7 +265,7 @@ jobs:
   hotfix:
     needs: [resolve, pinned, healthcheck]
     if: >-
-      !cancelled() && needs.pinned.outputs.broken == 'true' && needs.healthcheck.result == 'success'
+      !cancelled() && needs.pinned.outputs.broken == 'true' && needs.healthcheck.outputs.tested == 'true'
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.push.outputs.tag }}
